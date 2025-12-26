@@ -9,27 +9,36 @@ use Illuminate\Http\Client\Response;
 
 class FinanceApiHelper
 {
-    public static function get(string $endpoint, array $params = []): array
+    public static function get(string $endpoint, array $params = [], array $headers = []): array
     {
-        return self::send('GET', $endpoint, ['query' => $params]);
+        return self::send('GET', $endpoint, ['query' => $params], $headers);
     }
 
-    public static function post(string $endpoint, array $data = []): array
+   public static function post(string $endpoint, array $data = [], array $headers = []): array
     {
-        return self::send('POST', $endpoint, ['json' => $data]);
+        // ✅ kalau kosong, paksa jadi object {} saat dikirim
+        $json = empty($data) ? (object)[] : $data;
+
+        return self::send('POST', $endpoint, ['json' => $json], $headers);
     }
 
-    public static function put(string $endpoint, array $data = []): array
+ public static function postObject(string $endpoint, array $data = [], array $headers = []): array
     {
-        return self::send('PUT', $endpoint, ['json' => $data]);
+        $json = (object) $data; // array kosong => {}
+        return self::send('POST', $endpoint, ['json' => $json], $headers);
     }
 
-    public static function delete(string $endpoint, array $data = []): array
+    public static function put(string $endpoint, array $data = [], array $headers = []): array
     {
-        return self::send('DELETE', $endpoint, ['json' => $data]);
+        return self::send('PUT', $endpoint, ['json' => $data], $headers);
     }
 
-    private static function send(string $method, string $endpoint, array $options = []): array
+    public static function delete(string $endpoint, array $data = [], array $headers = []): array
+    {
+        return self::send('DELETE', $endpoint, ['json' => $data], $headers);
+    }
+
+    private static function send(string $method, string $endpoint, array $options = [], array $headers = []): array
     {
         try {
             $user = auth()->user();
@@ -45,41 +54,40 @@ class FinanceApiHelper
                 ];
             }
 
-            // fresh read untuk role/is_active terbaru
             $user->refresh();
 
             $token = FinanceBffToken::make($user);
             $base  = rtrim((string) config('finance.base_url'), '/');
             $url   = $base . '/' . ltrim($endpoint, '/');
 
-            /** @var Response $res */
-            $res = Http::timeout((int) config('finance.timeout'))
+            $client = Http::timeout((int) config('finance.timeout'))
                 ->acceptJson()
-                ->withToken($token)
-                ->send($method, $url, $options);
+                ->withToken($token);
+
+            if (!empty($headers)) {
+                $client = $client->withHeaders($headers);
+            }
+
+            /** @var Response $res */
+            $res = $client->send($method, $url, $options);
 
             $status = $res->status();
             $ok = $res->successful();
 
-            // --- Parse body safely ---
             $json = null;
             try {
-                // kalau body kosong atau bukan json, ini bisa throw / return null
                 $json = $res->json();
             } catch (\Throwable $e) {
                 $json = null;
             }
 
-            // --- Build robust message ---
             $message =
                 data_get($json, 'message')
                 ?? data_get($json, 'data.message')
                 ?? data_get($json, 'error.message')
                 ?? ($ok ? 'OK' : 'Request failed');
 
-            // --- Lift common fields to top-level for convenience ---
-            $apiStatus = data_get($json, 'status') // biasanya "success"/"fail"
-                ?? data_get($json, 'data.status');
+            $apiStatus = data_get($json, 'status') ?? data_get($json, 'data.status');
 
             $errorCode = data_get($json, 'error_code')
                 ?? data_get($json, 'errorCode')
@@ -91,7 +99,6 @@ class FinanceApiHelper
                 ?? data_get($json, 'error.details')
                 ?? data_get($json, 'data.errors');
 
-            // log minimal tapi informatif
             Log::info("📡 FINANCE {$method} {$url}", [
                 'http_status' => $status,
                 'success' => $ok,
@@ -106,7 +113,7 @@ class FinanceApiHelper
                 'api_status' => $apiStatus,
                 'error_code' => $errorCode,
                 'errors' => $errors,
-                'data' => $json, // keep full raw json response
+                'data' => $json,
             ];
         } catch (\Throwable $e) {
             Log::error("❌ FINANCE API error", [

@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Finance\AccountsController;
+use App\Http\Controllers\Finance\BusinessPartnersController;
+use App\Http\Controllers\Finance\JournalEntriesController;
+use App\Http\Controllers\Finance\OpeningBalancesController;
+use App\Http\Controllers\Finance\LedgersController;
 use App\Http\Controllers\ProfileController;
 use App\Services\Finance\FinanceApiClient;
 use App\Services\Finance\FinanceBffToken;
@@ -146,5 +150,84 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
                 ->name('finance.accounts.restore');
         });
     });
+
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+
+        // ===== Journal Entries (punyamu) =====
+        Route::get('/journal-entries', [JournalEntriesController::class, 'index'])
+            ->name('finance.journal_entries.index');
+
+        Route::get('/journal-entries/{id}/edit', [JournalEntriesController::class, 'edit'])
+            ->name('finance.journal_entries.edit');
+
+        // ===== Business Partners (VIEW) =====
+        Route::get('/business-partners', [BusinessPartnersController::class, 'index'])
+            ->name('finance.business_partners.index');
+
+        Route::get('/business-partners/{id}/edit', [BusinessPartnersController::class, 'edit'])
+            ->name('finance.business_partners.edit');
+
+        // ===== WRITE (admin/accountant saja) =====
+        Route::middleware('finance.access:admin,accountant')->group(function () {
+
+            // Journal Entries (punyamu)
+            Route::get('/journal-entries/create', [JournalEntriesController::class, 'create'])
+                ->name('finance.journal_entries.create');
+
+            Route::post('/journal-entries', [JournalEntriesController::class, 'store'])
+                ->name('finance.journal_entries.store');
+
+            Route::put('/journal-entries/{id}', [JournalEntriesController::class, 'update'])
+                ->name('finance.journal_entries.update');
+
+            Route::post('/journal-entries/{id}/post', [JournalEntriesController::class, 'post'])
+                ->name('finance.journal_entries.post');
+
+            Route::post('/journal-entries/{id}/reverse', [JournalEntriesController::class, 'reverse'])
+                ->name('finance.journal_entries.reverse');
+
+            // Business Partners (WRITE)
+            Route::get('/business-partners/create', [BusinessPartnersController::class, 'create'])
+                ->name('finance.business_partners.create');
+
+            Route::post('/business-partners', [BusinessPartnersController::class, 'store'])
+                ->name('finance.business_partners.store');
+
+            Route::put('/business-partners/{id}', [BusinessPartnersController::class, 'update'])
+                ->name('finance.business_partners.update');
+
+            Route::delete('/business-partners/{id}', [BusinessPartnersController::class, 'destroy'])
+                ->name('finance.business_partners.destroy');
+
+            Route::post('/business-partners/{id}/restore', [BusinessPartnersController::class, 'restore'])
+                ->name('finance.business_partners.restore');
+        });
+    });
+
+    Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/opening-balances', [OpeningBalancesController::class, 'index'])
+            ->name('finance.opening_balances.index');
+
+        Route::middleware('finance.access:admin,accountant')->group(function () {
+            Route::get('/opening-balances/create', [OpeningBalancesController::class, 'create'])
+                ->name('finance.opening_balances.create');
+
+            Route::post('/opening-balances', [OpeningBalancesController::class, 'store'])
+                ->name('finance.opening_balances.store');
+        });
+    });
+
+    Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/ledgers', [LedgersController::class, 'index'])
+            ->name('finance.ledgers.index');
+    });
+    
 
 require __DIR__ . '/auth.php';
