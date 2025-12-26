@@ -1,20 +1,25 @@
 @extends('finance.report-layout')
 
-@php($taxRateVal = $taxRate ?? null)
+@php
+    $taxRateVal = $taxRate ?? null;
+@endphp
 
 @section('title', 'Laba Rugi')
 @section('subtitle', 'Income Statement')
 
 @section('header_actions')
-    <a class="px-4 py-2 rounded border" href="{{ route('finance.income_statement.index', ['year' => $year]) }}">Reset</a>
+    <a class="px-4 py-2 rounded border" href="{{ route('finance.income_statement.index', ['year' => $year]) }}">
+        Reset</a>
 @endsection
 
 @section('header_meta')
-    <span class="report-chip">Periode: <span class="font-semibold">{{ data_get($period, 'from_date', $fromDate) }} - {{ data_get($period, 'to_date', $toDate) }}</span></span>
+    <span class="report-chip">Periode: <span class="font-semibold">{{ data_get($period, 'from_date', $fromDate) }} -
+            {{ data_get($period, 'to_date', $toDate) }}</span></span>
     <span class="report-chip">Include zero: <span class="font-semibold">{{ $includeZero ? 'Ya' : 'Tidak' }}</span></span>
     <span class="report-chip">Include header: <span class="font-semibold">{{ $includeHeader ? 'Ya' : 'Tidak' }}</span></span>
     @if (!is_null($taxRateVal))
-        <span class="report-chip">Tax rate: <span class="font-semibold">{{ number_format(((float) $taxRateVal) * 100, 2, ',', '.') }}%</span></span>
+        <span class="report-chip">Tax rate: <span
+                class="font-semibold">{{ number_format(((float) $taxRateVal) * 100, 2, ',', '.') }}%</span></span>
     @endif
 @endsection
 
@@ -101,7 +106,8 @@
                 <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white">Tampilkan</button>
                 <button type="submit" name="preset" value="year" class="px-4 py-2 rounded border">Tahun ini</button>
                 <button type="submit" name="preset" value="month" class="px-4 py-2 rounded border">Bulan ini</button>
-                <a class="px-4 py-2 rounded border" href="{{ route('finance.income_statement.index', ['year' => $year]) }}">Reset</a>
+                <a class="px-4 py-2 rounded border"
+                    href="{{ route('finance.income_statement.index', ['year' => $year]) }}">Reset</a>
             </div>
         </div>
     </form>
@@ -201,26 +207,34 @@
         <div class="mt-4 grid md:grid-cols-2 gap-3 text-sm">
             <div class="flex justify-between gap-3 border rounded p-3">
                 <span class="text-gray-600">JUMLAH PENDAPATAN</span>
-                <span class="font-semibold">{{ number_format((float) data_get($summary, 'total_revenue', 0), 2, ',', '.') }}</span>
+                <span
+                    class="font-semibold">{{ number_format((float) data_get($summary, 'total_revenue', 0), 2, ',', '.') }}</span>
             </div>
             <div class="flex justify-between gap-3 border rounded p-3">
                 <span class="text-gray-600">JUMLAH HPP</span>
-                <span class="font-semibold">{{ number_format((float) data_get($summary, 'total_cogs', 0), 2, ',', '.') }}</span>
+                <span
+                    class="font-semibold">{{ number_format((float) data_get($summary, 'total_cogs', 0), 2, ',', '.') }}</span>
             </div>
             <div class="flex justify-between gap-3 border rounded p-3">
                 <span class="text-gray-600">LABA KOTOR</span>
-                <span class="font-semibold">{{ number_format((float) data_get($summary, 'gross_profit', 0), 2, ',', '.') }}</span>
+                <span
+                    class="font-semibold">{{ number_format((float) data_get($summary, 'gross_profit', 0), 2, ',', '.') }}</span>
             </div>
             <div class="flex justify-between gap-3 border rounded p-3">
                 <span class="text-gray-600">JUMLAH BIAYA OPERASIONAL</span>
-                <span class="font-semibold">{{ number_format((float) data_get($summary, 'total_operating_expense', 0), 2, ',', '.') }}</span>
+                <span
+                    class="font-semibold">{{ number_format((float) data_get($summary, 'total_operating_expense', 0), 2, ',', '.') }}</span>
             </div>
             <div class="flex justify-between gap-3 border rounded p-3">
                 <span class="text-gray-600">LABA BERSIH (OPERASIONAL)</span>
-                <span class="font-semibold">{{ number_format((float) data_get($summary, 'operating_profit', 0), 2, ',', '.') }}</span>
+                <span
+                    class="font-semibold">{{ number_format((float) data_get($summary, 'operating_profit', 0), 2, ',', '.') }}</span>
             </div>
             <div class="flex justify-between gap-3 border rounded p-3">
-                <span class="text-gray-600">PAJAK @if (!is_null($taxRateVal)) ({{ number_format(((float) $taxRateVal) * 100, 2, ',', '.') }}%) @endif</span>
+                <span class="text-gray-600">PAJAK @if (!is_null($taxRateVal))
+                        ({{ number_format(((float) $taxRateVal) * 100, 2, ',', '.') }}%)
+                    @endif
+                </span>
                 <span class="font-semibold {{ ((float) data_get($summary, 'tax_amount', 0)) < 0 ? 'text-red-600' : '' }}">
                     {{ number_format((float) data_get($summary, 'tax_amount', 0), 2, ',', '.') }}
                 </span>
