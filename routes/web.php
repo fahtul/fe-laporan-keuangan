@@ -6,6 +6,8 @@ use App\Http\Controllers\Finance\BusinessPartnersController;
 use App\Http\Controllers\Finance\JournalEntriesController;
 use App\Http\Controllers\Finance\OpeningBalancesController;
 use App\Http\Controllers\Finance\LedgersController;
+use App\Http\Controllers\Finance\IncomeStatementController;
+use App\Http\Controllers\Finance\TrialBalanceController;
 use App\Http\Controllers\ProfileController;
 use App\Services\Finance\FinanceApiClient;
 use App\Services\Finance\FinanceBffToken;
@@ -15,6 +17,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
     return view('welcome');
 });
 
@@ -227,6 +233,20 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->group(function () {
         Route::get('/ledgers', [LedgersController::class, 'index'])
             ->name('finance.ledgers.index');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/trial-balance', [TrialBalanceController::class, 'index'])
+            ->name('finance.trial_balance.index');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/income-statement', [IncomeStatementController::class, 'index'])
+            ->name('finance.income_statement.index');
     });
     
 
