@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Finance\AccountsController;
+use App\Http\Controllers\Finance\BalanceSheetController;
 use App\Http\Controllers\Finance\BusinessPartnersController;
 use App\Http\Controllers\Finance\JournalEntriesController;
 use App\Http\Controllers\Finance\OpeningBalancesController;
@@ -240,6 +241,13 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->group(function () {
         Route::get('/trial-balance', [TrialBalanceController::class, 'index'])
             ->name('finance.trial_balance.index');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/balance-sheet', [BalanceSheetController::class, 'index'])
+            ->name('finance.balance_sheet.index');
     });
 
 Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
