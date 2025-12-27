@@ -6,6 +6,7 @@ use App\Http\Controllers\Finance\BalanceSheetController;
 use App\Http\Controllers\Finance\AccountsCashflowMappingController;
 use App\Http\Controllers\Finance\BusinessPartnersController;
 use App\Http\Controllers\Finance\CashFlowController;
+use App\Http\Controllers\Finance\EquityStatementController;
 use App\Http\Controllers\Finance\JournalEntriesController;
 use App\Http\Controllers\Finance\OpeningBalancesController;
 use App\Http\Controllers\Finance\LedgersController;
@@ -256,6 +257,13 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->group(function () {
         Route::get('/worksheet', [WorksheetController::class, 'index'])
             ->name('finance.worksheet.index');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/equity-statement', [EquityStatementController::class, 'index'])
+            ->name('finance.equity_statement.index');
     });
 
 Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])

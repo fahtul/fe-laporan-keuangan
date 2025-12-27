@@ -44,6 +44,9 @@
                             <x-dropdown-link :href="route('finance.income_statement.index')">
                                 Laba Rugi
                             </x-dropdown-link>
+                            <x-dropdown-link :href="route('finance.equity_statement.index')">
+                                LP Equitas
+                            </x-dropdown-link>
                             <x-dropdown-link :href="route('finance.cash_flow.index')">
                                 Arus Kas
                             </x-dropdown-link>
@@ -145,6 +148,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('finance.income_statement.index')" :active="request()->routeIs('finance.income_statement.*')">
                 Laba Rugi
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('finance.equity_statement.index')" :active="request()->routeIs('finance.equity_statement.*')">
+                LP Equitas
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('finance.cash_flow.index')" :active="request()->routeIs('finance.cash_flow.*')">
                 Arus Kas
