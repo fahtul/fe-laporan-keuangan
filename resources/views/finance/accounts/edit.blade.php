@@ -25,6 +25,19 @@
                     class="border rounded w-full px-3 py-2" required>
             </div>
 
+            <div>
+                <label class="block text-sm mb-1">Cash Flow Category (optional)</label>
+                @php $cfOld = old('cf_activity', $account['cf_activity'] ?? ''); @endphp
+                <select name="cf_activity" class="border rounded p-2 w-full">
+                    <option value="" {{ (string) $cfOld === '' ? 'selected' : '' }}>— Default (Operating) —</option>
+                    <option value="cash" {{ (string) $cfOld === 'cash' ? 'selected' : '' }}>cash</option>
+                    <option value="operating" {{ (string) $cfOld === 'operating' ? 'selected' : '' }}>operating</option>
+                    <option value="investing" {{ (string) $cfOld === 'investing' ? 'selected' : '' }}>investing</option>
+                    <option value="financing" {{ (string) $cfOld === 'financing' ? 'selected' : '' }}>financing</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Dipakai oleh report Arus Kas (Cash Flow).</p>
+            </div>
+
             {{-- TYPE + NORMAL BALANCE (auto via JS) --}}
             <div>
                 <label class="block text-sm mb-1">Type</label>

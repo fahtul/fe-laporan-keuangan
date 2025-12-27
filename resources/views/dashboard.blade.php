@@ -93,27 +93,43 @@
 	                    </div>
 	                </a>
 
-	                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-	                    href="{{ route('finance.balance_sheet.index') }}"
-	                    data-keywords="neraca balance sheet report laporan posisi per tanggal">
-	                    <div class="flex items-start gap-3">
-	                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
-	                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-	                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m-6 4h6m-6 4h6M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-	                            </svg>
-	                        </div>
-	                        <div class="min-w-0">
-	                            <div class="font-semibold text-gray-900 group-hover:text-indigo-700">Neraca</div>
-	                            <div class="text-sm text-gray-600">Balance sheet (posisi per tanggal).</div>
-	                        </div>
-	                    </div>
-	                </a>
+		                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+		                    href="{{ route('finance.balance_sheet.index') }}"
+		                    data-keywords="neraca balance sheet report laporan posisi per tanggal">
+		                    <div class="flex items-start gap-3">
+		                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
+		                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m-6 4h6m-6 4h6M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+		                            </svg>
+		                        </div>
+		                        <div class="min-w-0">
+		                            <div class="font-semibold text-gray-900 group-hover:text-indigo-700">Neraca</div>
+		                            <div class="text-sm text-gray-600">Balance sheet (posisi per tanggal).</div>
+		                        </div>
+		                    </div>
+		                </a>
 
-	                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-	                    href="{{ route('finance.ledgers.index') }}"
-	                    data-keywords="buku besar ledger general ledger report laporan">
-	                    <div class="flex items-start gap-3">
-	                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
+		                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+		                    href="{{ route('finance.cash_flow.index') }}"
+		                    data-keywords="arus kas cash flow cfo cfi cff report laporan">
+		                    <div class="flex items-start gap-3">
+		                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
+		                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-10V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" />
+		                            </svg>
+		                        </div>
+		                        <div class="min-w-0">
+		                            <div class="font-semibold text-gray-900 group-hover:text-indigo-700">Arus Kas</div>
+		                            <div class="text-sm text-gray-600">Cash flow (CFO/CFI/CFF).</div>
+		                        </div>
+		                    </div>
+		                </a>
+
+		                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+		                    href="{{ route('finance.ledgers.index') }}"
+		                    data-keywords="buku besar ledger general ledger report laporan">
+		                    <div class="flex items-start gap-3">
+		                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h10M7 11h10M7 15h6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
                             </svg>
@@ -195,11 +211,11 @@
                 @endif
 
                 {{-- Master data --}}
-                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-sky-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    href="{{ route('finance.accounts.index') }}"
-                    data-keywords="accounts akun coa master data">
-                    <div class="flex items-start gap-3">
-                        <div class="shrink-0 rounded-md bg-sky-50 p-2 text-sky-700">
+	                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-sky-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+	                    href="{{ route('finance.accounts.index') }}"
+	                    data-keywords="accounts akun coa master data">
+	                    <div class="flex items-start gap-3">
+	                        <div class="shrink-0 rounded-md bg-sky-50 p-2 text-sky-700">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
                             </svg>
@@ -207,15 +223,33 @@
                         <div class="min-w-0">
                             <div class="font-semibold text-gray-900 group-hover:text-sky-700">Accounts</div>
                             <div class="text-sm text-gray-600">Chart of accounts (COA).</div>
-                        </div>
-                    </div>
-                </a>
+	                        </div>
+	                    </div>
+	                </a>
 
-                @if ($canWrite)
-                    <a class="menu-card group bg-white border rounded-lg p-4 hover:border-sky-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        href="{{ route('finance.accounts.create') }}"
-                        data-keywords="buat account akun coa create">
-                        <div class="flex items-start gap-3">
+	                @if ($canWrite)
+	                    <a class="menu-card group bg-white border rounded-lg p-4 hover:border-sky-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+	                        href="{{ route('finance.accounts.cashflow_mapping.index') }}"
+	                        data-keywords="mapping arus kas cash flow coa cf activity">
+	                        <div class="flex items-start gap-3">
+	                            <div class="shrink-0 rounded-md bg-sky-50 p-2 text-sky-700">
+	                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+	                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2z" />
+	                                </svg>
+	                            </div>
+	                            <div class="min-w-0">
+	                                <div class="font-semibold text-gray-900 group-hover:text-sky-700">Mapping Arus Kas (COA)</div>
+	                                <div class="text-sm text-gray-600">Set kategori arus kas untuk akun.</div>
+	                            </div>
+	                        </div>
+	                    </a>
+	                @endif
+
+	                @if ($canWrite)
+	                    <a class="menu-card group bg-white border rounded-lg p-4 hover:border-sky-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+	                        href="{{ route('finance.accounts.create') }}"
+	                        data-keywords="buat account akun coa create">
+	                        <div class="flex items-start gap-3">
                             <div class="shrink-0 rounded-md bg-sky-50 p-2 text-sky-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

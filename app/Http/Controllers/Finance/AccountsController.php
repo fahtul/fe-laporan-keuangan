@@ -98,6 +98,7 @@ class AccountsController extends Controller
             'code' => 'required|string|max:50',
             'name' => 'required|string|max:200',
             'type' => 'required|in:asset,liability,equity,revenue,expense',
+            'cf_activity' => 'nullable|in:cash,operating,investing,financing',
 
             // baru:
             'parent_id' => 'nullable|string|max:50',
@@ -106,8 +107,9 @@ class AccountsController extends Controller
 
         // rapikan empty string -> null
         $payload['parent_id'] = ($payload['parent_id'] ?? null) ?: null;
+        $payload['cf_activity'] = ($payload['cf_activity'] ?? null) ?: null;
 
-        $payload['is_postable'] = ((string)($payload['is_postable' ?? '0']) === '1');
+        $payload['is_postable'] = ((string) ($payload['is_postable'] ?? '0') === '1');
         $res = FinanceApiHelper::post('/v1/accounts', $payload);
 
         if (!($res['success'] ?? false)) {
@@ -163,6 +165,7 @@ class AccountsController extends Controller
             'code' => 'required|string|max:50',
             'name' => 'required|string|max:200',
             'type' => 'required|in:asset,liability,equity,revenue,expense',
+            'cf_activity' => 'nullable|in:cash,operating,investing,financing',
 
             // baru:
             'parent_id' => 'nullable|string|max:50',
@@ -170,6 +173,7 @@ class AccountsController extends Controller
         ]);
 
         $payload['parent_id'] = ($payload['parent_id'] ?? null) ?: null;
+        $payload['cf_activity'] = ($payload['cf_activity'] ?? null) ?: null;
         $payload['is_postable'] = ((string)($payload['is_postable'] ?? '0') === '1');
 
 

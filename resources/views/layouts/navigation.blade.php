@@ -41,6 +41,9 @@
                             <x-dropdown-link :href="route('finance.income_statement.index')">
                                 Laba Rugi
                             </x-dropdown-link>
+                            <x-dropdown-link :href="route('finance.cash_flow.index')">
+                                Arus Kas
+                            </x-dropdown-link>
                             <x-dropdown-link :href="route('finance.ledgers.index')">
                                 Buku Besar
                             </x-dropdown-link>
@@ -55,6 +58,11 @@
                             <x-dropdown-link :href="route('finance.accounts.index')">
                                 Accounts
                             </x-dropdown-link>
+                            @if (in_array(Auth::user()->role ?? 'viewer', ['admin', 'accountant'], true))
+                                <x-dropdown-link :href="route('finance.accounts.cashflow_mapping.index')">
+                                    Mapping Arus Kas (COA)
+                                </x-dropdown-link>
+                            @endif
                             <x-dropdown-link :href="route('finance.business_partners.index')">
                                 Business Partners
                             </x-dropdown-link>
@@ -132,6 +140,9 @@
             <x-responsive-nav-link :href="route('finance.income_statement.index')" :active="request()->routeIs('finance.income_statement.*')">
                 Laba Rugi
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('finance.cash_flow.index')" :active="request()->routeIs('finance.cash_flow.*')">
+                Arus Kas
+            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('finance.ledgers.index')" :active="request()->routeIs('finance.ledgers.*')">
                 Buku Besar
             </x-responsive-nav-link>
@@ -144,6 +155,11 @@
             <x-responsive-nav-link :href="route('finance.accounts.index')" :active="request()->routeIs('finance.accounts.*')">
                 Accounts
             </x-responsive-nav-link>
+            @if (in_array(Auth::user()->role ?? 'viewer', ['admin', 'accountant'], true))
+                <x-responsive-nav-link :href="route('finance.accounts.cashflow_mapping.index')" :active="request()->routeIs('finance.accounts.cashflow_mapping.*')">
+                    Mapping Arus Kas (COA)
+                </x-responsive-nav-link>
+            @endif
             <x-responsive-nav-link :href="route('finance.business_partners.index')" :active="request()->routeIs('finance.business_partners.*')">
                 Business Partners
             </x-responsive-nav-link>

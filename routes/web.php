@@ -3,7 +3,9 @@
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Finance\AccountsController;
 use App\Http\Controllers\Finance\BalanceSheetController;
+use App\Http\Controllers\Finance\AccountsCashflowMappingController;
 use App\Http\Controllers\Finance\BusinessPartnersController;
+use App\Http\Controllers\Finance\CashFlowController;
 use App\Http\Controllers\Finance\JournalEntriesController;
 use App\Http\Controllers\Finance\OpeningBalancesController;
 use App\Http\Controllers\Finance\LedgersController;
@@ -155,6 +157,11 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
             Route::delete('/accounts/{id}', [AccountsController::class, 'destroy'])->name('finance.accounts.destroy');
             Route::post('/accounts/{id}/restore', [AccountsController::class, 'restore'])
                 ->name('finance.accounts.restore');
+
+            Route::get('/accounts/cashflow-mapping', [AccountsCashflowMappingController::class, 'index'])
+                ->name('finance.accounts.cashflow_mapping.index');
+            Route::post('/accounts/cashflow-mapping', [AccountsCashflowMappingController::class, 'store'])
+                ->name('finance.accounts.cashflow_mapping.store');
         });
     });
 
@@ -241,6 +248,13 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->group(function () {
         Route::get('/trial-balance', [TrialBalanceController::class, 'index'])
             ->name('finance.trial_balance.index');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/cash-flow', [CashFlowController::class, 'index'])
+            ->name('finance.cash_flow.index');
     });
 
 Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
