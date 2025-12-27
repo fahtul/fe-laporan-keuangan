@@ -18,7 +18,9 @@
 
                     <x-dropdown align="left" width="56">
                         <x-slot name="trigger">
-                            @php($financeActive = request()->routeIs('finance.*'))
+                            @php
+                                $financeActive = request()->routeIs('finance.*');
+                            @endphp
                             <button
                                 class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out focus:outline-none {{ $financeActive ? 'border-indigo-400 text-gray-900 focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:text-gray-700 focus:border-gray-300' }}">
                                 Finance
@@ -52,6 +54,12 @@
                             </x-dropdown-link>
                             <x-dropdown-link :href="route('finance.ledgers.index')">
                                 Buku Besar
+                            </x-dropdown-link>
+                            <x-dropdown-link :href="route('finance.subledgers.index')">
+                                Buku Pembantu
+                            </x-dropdown-link>
+                            <x-dropdown-link :href="route('finance.closings.year_end.index')">
+                                Tutup Buku
                             </x-dropdown-link>
                             <div class="border-t border-gray-100 my-1"></div>
                             <x-dropdown-link :href="route('finance.journal_entries.index')">
@@ -157,6 +165,12 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('finance.ledgers.index')" :active="request()->routeIs('finance.ledgers.*')">
                 Buku Besar
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('finance.subledgers.index')" :active="request()->routeIs('finance.subledgers.*')">
+                Buku Pembantu
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('finance.closings.year_end.index')" :active="request()->routeIs('finance.closings.*')">
+                Tutup Buku
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('finance.journal_entries.index')" :active="request()->routeIs('finance.journal_entries.*')">
                 Journal Entries

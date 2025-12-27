@@ -12,7 +12,9 @@ use App\Http\Controllers\Finance\OpeningBalancesController;
 use App\Http\Controllers\Finance\LedgersController;
 use App\Http\Controllers\Finance\IncomeStatementController;
 use App\Http\Controllers\Finance\TrialBalanceController;
+use App\Http\Controllers\Finance\SubledgersController;
 use App\Http\Controllers\Finance\WorksheetController;
+use App\Http\Controllers\Finance\ClosingsController;
 use App\Http\Controllers\ProfileController;
 use App\Services\Finance\FinanceApiClient;
 use App\Services\Finance\FinanceBffToken;
@@ -286,6 +288,25 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
         Route::get('/income-statement', [IncomeStatementController::class, 'index'])
             ->name('finance.income_statement.index');
     });
-    
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/subledgers', [SubledgersController::class, 'index'])
+            ->name('finance.subledgers.index');
+        Route::get('/subledgers/{bpId}', [SubledgersController::class, 'show'])
+            ->name('finance.subledgers.show');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance/closings')
+    ->group(function () {
+        Route::get('/year-end', [ClosingsController::class, 'index'])
+            ->name('finance.closings.year_end.index');
+        Route::post('/year-end', [ClosingsController::class, 'store'])
+            ->middleware('finance.access:admin,accountant')
+            ->name('finance.closings.year_end.store');
+    });
+     
 
 require __DIR__ . '/auth.php';

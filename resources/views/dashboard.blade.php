@@ -157,10 +157,10 @@
 		                    </div>
 		                </a>
 
-		                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-		                    href="{{ route('finance.ledgers.index') }}"
-		                    data-keywords="buku besar ledger general ledger report laporan">
-		                    <div class="flex items-start gap-3">
+                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    href="{{ route('finance.ledgers.index') }}"
+                    data-keywords="buku besar ledger general ledger report laporan">
+                    <div class="flex items-start gap-3">
 		                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h10M7 11h10M7 15h6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -169,6 +169,42 @@
                         <div class="min-w-0">
                             <div class="font-semibold text-gray-900 group-hover:text-indigo-700">Buku Besar</div>
                             <div class="text-sm text-gray-600">General ledger per akun dan periode.</div>
+                        </div>
+                    </div>
+                </a>
+
+                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    href="{{ route('finance.subledgers.index') }}"
+                    data-keywords="buku pembantu subledger ar ap piutang hutang business partner">
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V6a2 2 0 012-2h4a2 2 0 012 2v1m-8 0h8m-8 0H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-2" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-semibold text-gray-900 group-hover:text-indigo-700">Buku Pembantu</div>
+                            <div class="text-sm text-gray-600">Subledger AR/AP per Business Partner.</div>
+                        </div>
+                    </div>
+                </a>
+
+                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    href="{{ route('finance.closings.year_end.index') }}"
+                    data-keywords="tutup buku closing year-end">
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-semibold text-gray-900 group-hover:text-indigo-700">Tutup Buku</div>
+                            <div class="text-sm text-gray-600">Year-end closing & generate opening.</div>
                         </div>
                     </div>
                 </a>
