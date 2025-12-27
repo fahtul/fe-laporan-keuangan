@@ -11,6 +11,7 @@ use App\Http\Controllers\Finance\OpeningBalancesController;
 use App\Http\Controllers\Finance\LedgersController;
 use App\Http\Controllers\Finance\IncomeStatementController;
 use App\Http\Controllers\Finance\TrialBalanceController;
+use App\Http\Controllers\Finance\WorksheetController;
 use App\Http\Controllers\ProfileController;
 use App\Services\Finance\FinanceApiClient;
 use App\Services\Finance\FinanceBffToken;
@@ -248,6 +249,13 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->group(function () {
         Route::get('/trial-balance', [TrialBalanceController::class, 'index'])
             ->name('finance.trial_balance.index');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/worksheet', [WorksheetController::class, 'index'])
+            ->name('finance.worksheet.index');
     });
 
 Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])

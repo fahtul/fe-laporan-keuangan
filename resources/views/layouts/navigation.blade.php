@@ -35,6 +35,9 @@
                             <x-dropdown-link :href="route('finance.trial_balance.index')">
                                 Neraca Saldo
                             </x-dropdown-link>
+                            <x-dropdown-link :href="route('finance.worksheet.index')">
+                                Neraca Lajur
+                            </x-dropdown-link>
                             <x-dropdown-link :href="route('finance.balance_sheet.index')">
                                 Neraca
                             </x-dropdown-link>
@@ -133,6 +136,9 @@
             <div class="px-4 pt-2 text-xs font-semibold text-gray-500">FINANCE</div>
             <x-responsive-nav-link :href="route('finance.trial_balance.index')" :active="request()->routeIs('finance.trial_balance.*')">
                 Neraca Saldo
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('finance.worksheet.index')" :active="request()->routeIs('finance.worksheet.*')">
+                Neraca Lajur
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('finance.balance_sheet.index')" :active="request()->routeIs('finance.balance_sheet.*')">
                 Neraca

@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
-class CashFlowController extends Controller
+class WorksheetController extends Controller
 {
     public function index(Request $request)
     {
@@ -18,14 +18,6 @@ class CashFlowController extends Controller
 
         $defaultFrom = $year . '-01-01';
         $defaultTo = $year . '-12-31';
-
-        $includeZero = ((string) $request->query('include_zero', '0') === '1');
-        $includeDetails = ((string) $request->query('include_details', '1') === '1');
-
-        $cashPrefix = trim((string) $request->query('cash_prefix', '11'));
-        if ($cashPrefix === '') {
-            $cashPrefix = '11';
-        }
 
         $preset = (string) $request->query('preset', '');
         if ($preset === 'year') {
@@ -58,77 +50,55 @@ class CashFlowController extends Controller
             [$fromDate, $toDate] = [$toDate, $fromDate];
         }
 
-        $cashAccountIdsRaw = $request->query('cash_account_ids');
-        $cashAccountIds = [];
-        if (is_array($cashAccountIdsRaw)) {
-            $cashAccountIds = $cashAccountIdsRaw;
-        } else {
-            $csv = trim((string) $cashAccountIdsRaw);
-            if ($csv !== '') {
-                $cashAccountIds = preg_split('/[\s,]+/', $csv) ?: [];
-            }
-        }
-        $cashAccountIds = collect($cashAccountIds)
-            ->map(fn($v) => trim((string) $v))
-            ->filter(fn($v) => $v !== '')
-            ->values()
-            ->all();
+        $includeZero = ((string) $request->query('include_zero', '0') === '1');
+        $includeHeader = ((string) $request->query('include_header', '0') === '1');
+        $includeVirtualProfit = ((string) $request->query('include_virtual_profit', '0') === '1');
+        $useCodeRule = ((string) $request->query('use_code_rule', '0') === '1');
 
-        $apiQuery = [
+        $res = FinanceApiHelper::get('/v1/worksheets', [
             'from_date' => $fromDate,
             'to_date' => $toDate,
             'include_zero' => $includeZero ? '1' : '0',
-            'include_details' => $includeDetails ? '1' : '0',
-            'cash_prefix' => $cashPrefix,
-        ];
-
-        if (!empty($cashAccountIds)) {
-            $apiQuery['cash_account_ids'] = $cashAccountIds;
-        }
-
-        $res = FinanceApiHelper::get('/v1/cash-flow', $apiQuery);
+            'include_header' => $includeHeader ? '1' : '0',
+            'include_virtual_profit' => $includeVirtualProfit ? '1' : '0',
+            'use_code_rule' => $useCodeRule ? '1' : '0',
+        ]);
 
         $apiError = null;
+        $items = [];
+        $totals = [];
         $period = [
             'from_date' => $fromDate,
             'to_date' => $toDate,
         ];
-
-        $cashAccounts = [];
-        $cash = [];
-        $activities = [];
-        $totals = [];
-        $reconciliation = [];
+        $virtualRows = [];
 
         if (!($res['success'] ?? false)) {
-            $apiError = $res['message'] ?? 'Failed to load cash flow';
+            $apiError = $res['message'] ?? 'Failed to load worksheet';
         } else {
             $json = $res['data'] ?? null;
             $payload = data_get($json, 'data.data') ?? data_get($json, 'data') ?? null;
 
-            $period = data_get($payload, 'period', $period) ?: $period;
-            $cashAccounts = data_get($payload, 'cash_accounts', []) ?: [];
-            $cash = data_get($payload, 'cash', []) ?: [];
-            $activities = data_get($payload, 'activities', []) ?: [];
+            $items = data_get($payload, 'items', []) ?: [];
             $totals = data_get($payload, 'totals', []) ?: [];
-            $reconciliation = data_get($payload, 'reconciliation', []) ?: [];
+            $period = data_get($payload, 'period', $period) ?: $period;
+            $virtualRows = data_get($payload, 'virtual_rows', []) ?: [];
         }
 
-        return view('finance.cash_flow.index', [
+        return view('finance.worksheet.index', [
             'year' => $year,
             'fromDate' => $fromDate,
             'toDate' => $toDate,
             'includeZero' => $includeZero,
-            'includeDetails' => $includeDetails,
-            'cashPrefix' => $cashPrefix,
-            'cashAccountIds' => $cashAccountIds,
-            'period' => $period,
-            'cashAccounts' => $cashAccounts,
-            'cash' => $cash,
-            'activities' => $activities,
+            'includeHeader' => $includeHeader,
+            'includeVirtualProfit' => $includeVirtualProfit,
+            'useCodeRule' => $useCodeRule,
+            'items' => $items,
             'totals' => $totals,
-            'reconciliation' => $reconciliation,
+            'period' => $period,
+            'virtualRows' => $virtualRows,
             'apiError' => $apiError,
         ]);
     }
 }
+

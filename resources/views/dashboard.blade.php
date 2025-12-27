@@ -77,10 +77,26 @@
                     </div>
                 </a>
 
-	                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-	                    href="{{ route('finance.income_statement.index') }}"
-	                    data-keywords="laba rugi income statement report laporan">
-	                    <div class="flex items-start gap-3">
+                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    href="{{ route('finance.worksheet.index') }}"
+                    data-keywords="neraca lajur worksheet report excel">
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-7 4h10a2 2 0 002-2V7a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-semibold text-gray-900 group-hover:text-indigo-700">Neraca Lajur</div>
+                            <div class="text-sm text-gray-600">Worksheet (opening/mutation/closing/P&amp;L/final).</div>
+                        </div>
+                    </div>
+                </a>
+
+                <a class="menu-card group bg-white border rounded-lg p-4 hover:border-indigo-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    href="{{ route('finance.income_statement.index') }}"
+                    data-keywords="laba rugi income statement report laporan">
+                    <div class="flex items-start gap-3">
 	                        <div class="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-700">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 11V3m0 8h8m-8 0l3-3m-3 3l-3-3M5 21h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
