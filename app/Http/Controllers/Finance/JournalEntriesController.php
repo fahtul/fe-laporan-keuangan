@@ -15,9 +15,11 @@ class JournalEntriesController extends Controller
         // ambil postable accounts untuk dropdown lines
         $res = FinanceApiHelper::get('/v1/accounts/options', [
             'q' => '',
-            'limit' => 200,
+            'limit' => 1000,
             'include_inactive' => 'false',
         ]);
+
+        // dd($res);
 
         if (!($res['success'] ?? false)) {
             return [[], $res['message'] ?? 'Failed to load account options'];
@@ -125,6 +127,8 @@ class JournalEntriesController extends Controller
             'page' => $page,
             'limit' => $limit,
         ]);
+
+        // dd($res);
 
         $items = data_get($res, 'data.data', []);
         $meta  = data_get($res, 'data.meta', [
@@ -240,13 +244,14 @@ class JournalEntriesController extends Controller
     {
         $res = FinanceApiHelper::get("/v1/journal-entries/{$id}");
 
+        // dd($res);
         if (!($res['success'] ?? false)) {
             abort(500, $res['message'] ?? 'Failed');
         }
 
         $entry = data_get($res, 'data.data', []);
         [$accounts, $accountsError] = $this->fetchAccountOptions();
-
+        // dd($accounts, $accountsError);
         // idempotency key untuk POST button (biar retry submit tetap sama)
         $idemKey = (string) Str::uuid();
 

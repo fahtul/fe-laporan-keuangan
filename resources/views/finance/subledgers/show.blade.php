@@ -14,18 +14,29 @@
         $accCode = (string) data_get($account, 'code', '');
         $accName = (string) data_get($account, 'name', '');
 
-        $openAmt = (float) (data_get($opening, 'amount') ?? data_get($opening, 'balance') ?? data_get($opening, 'opening_balance') ?? 0);
-        $openSide = (string) (data_get($opening, 'side') ?? data_get($opening, 'pos') ?? data_get($opening, 'opening_pos') ?? '');
+        $openAmt =
+            (float) (data_get($opening, 'amount') ??
+                (data_get($opening, 'balance') ?? (data_get($opening, 'opening_balance') ?? 0)));
+        $openSide =
+            (string) (data_get($opening, 'side') ??
+                (data_get($opening, 'pos') ?? (data_get($opening, 'opening_pos') ?? '')));
 
-        $closeAmt = (float) (data_get($closing, 'amount') ?? data_get($closing, 'balance') ?? data_get($closing, 'closing_balance') ?? 0);
-        $closeSide = (string) (data_get($closing, 'side') ?? data_get($closing, 'pos') ?? data_get($closing, 'closing_pos') ?? '');
+        $closeAmt =
+            (float) (data_get($closing, 'amount') ??
+                (data_get($closing, 'balance') ?? (data_get($closing, 'closing_balance') ?? 0)));
+        $closeSide =
+            (string) (data_get($closing, 'side') ??
+                (data_get($closing, 'pos') ?? (data_get($closing, 'closing_pos') ?? '')));
     @endphp
 
     <span class="report-chip">BP: <span class="font-semibold">{{ $bpCode }} - {{ $bpName }}</span></span>
     <span class="report-chip">Akun: <span class="font-semibold">{{ $accCode }} - {{ $accName }}</span></span>
-    <span class="report-chip">Periode: <span class="font-semibold">{{ data_get($period, 'from_date', $fromDate) }} - {{ data_get($period, 'to_date', $toDate) }}</span></span>
-    <span class="report-chip">Saldo Awal: <span class="font-semibold">{{ number_format($openAmt, 2, ',', '.') }} {{ strtoupper($openSide) }}</span></span>
-    <span class="report-chip">Saldo Akhir: <span class="font-semibold">{{ number_format($closeAmt, 2, ',', '.') }} {{ strtoupper($closeSide) }}</span></span>
+    <span class="report-chip">Periode: <span class="font-semibold">{{ data_get($period, 'from_date', $fromDate) }} -
+            {{ data_get($period, 'to_date', $toDate) }}</span></span>
+    <span class="report-chip">Saldo Awal: <span class="font-semibold">{{ number_format($openAmt, 2, ',', '.') }}
+            {{ strtoupper($openSide) }}</span></span>
+    <span class="report-chip">Saldo Akhir: <span class="font-semibold">{{ number_format($closeAmt, 2, ',', '.') }}
+            {{ strtoupper($closeSide) }}</span></span>
 @endsection
 
 @section('tools')
@@ -62,7 +73,8 @@
                 <input class="border rounded px-3 py-2 w-full bg-gray-50" value="{{ $toDate }}" readonly>
             </div>
         </div>
-        <a class="px-4 py-2 rounded border bg-white text-gray-900 hover:bg-gray-50" href="{{ $backUrl }}">Ubah Filter</a>
+        <a class="px-4 py-2 rounded border bg-white text-gray-900 hover:bg-gray-50" href="{{ $backUrl }}">Ubah
+            Filter</a>
     </div>
 @endsection
 
@@ -74,8 +86,8 @@
     @endif
 
     @php
-        $periodDebit = (float) (data_get($totals, 'period_debit') ?? data_get($totals, 'mutation_debit') ?? 0);
-        $periodCredit = (float) (data_get($totals, 'period_credit') ?? data_get($totals, 'mutation_credit') ?? 0);
+        $periodDebit = (float) (data_get($totals, 'period_debit') ?? (data_get($totals, 'mutation_debit') ?? 0));
+        $periodCredit = (float) (data_get($totals, 'period_credit') ?? (data_get($totals, 'mutation_credit') ?? 0));
 
         $rowsArr = is_array($rows) ? $rows : [];
         $firstKind = count($rowsArr) > 0 ? (string) data_get($rowsArr[0], 'kind', '') : '';
@@ -116,20 +128,45 @@
                     @forelse ($rows as $idx => $r)
                         @php
                             $kind = strtolower((string) data_get($r, 'kind', ''));
-                            $date = (string) (data_get($r, 'date') ?? data_get($r, 'txn_date') ?? '');
-                            $entryId = (string) (data_get($r, 'entry_id') ?? data_get($r, 'journal_entry_id') ?? '');
-                            $desc = (string) (data_get($r, 'description') ?? data_get($r, 'memo') ?? data_get($r, 'ref') ?? '');
+                            $date = (string) (data_get($r, 'date') ?? (data_get($r, 'txn_date') ?? ''));
+                            $entryId = (string) (data_get($r, 'entry_id') ?? (data_get($r, 'journal_entry_id') ?? ''));
+                            $desc =
+                                (string) (data_get($r, 'description') ??
+                                    (data_get($r, 'memo') ?? (data_get($r, 'ref') ?? '')));
 
                             $debit = (float) (data_get($r, 'debit') ?? 0);
                             $credit = (float) (data_get($r, 'credit') ?? 0);
 
-                            $bal = (float) (data_get($r, 'running_balance') ?? data_get($r, 'balance') ?? 0);
-                            $balSide = (string) (data_get($r, 'running_side') ?? data_get($r, 'balance_side') ?? data_get($r, 'pos') ?? '');
+                            $runningSigned = data_get($r, 'running_signed', null);
+
+                            // AMBIL DARI FIELD YANG BENAR
+                            $bal =
+                                (float) (data_get($r, 'running_amount') ??
+                                    (data_get($r, 'running_balance') ?? // fallback legacy
+                                        ((is_numeric($runningSigned) ? abs((float) $runningSigned) : null) ??
+                                            (data_get($r, 'balance') ?? 0))));
+
+                            $balSide =
+                                (string) (data_get($r, 'running_side') ??
+                                    (data_get($r, 'balance_side') ?? (data_get($r, 'pos') ?? '')));
+
+                            // kalau balSide kosong tapi running_signed ada, tentukan dari tanda
+                            if ($balSide === '' && is_numeric($runningSigned)) {
+                                $balSide = ((float) $runningSigned) >= 0 ? 'debit' : 'credit';
+                            }
                         @endphp
 
                         <tr class="{{ $kind === 'opening' ? 'bg-green-50' : '' }}">
                             <td class="p-3 text-gray-600">{{ (int) $idx + 1 }}</td>
-                            <td class="p-3 whitespace-nowrap">{{ $date }}</td>
+                            @php
+                                $dateDisp = $date;
+                                if (is_string($dateDisp) && strlen($dateDisp) >= 10) {
+                                    // ISO "2024-12-31T16:00:00.000Z" -> "2024-12-31"
+                                    $dateDisp = substr($dateDisp, 0, 10);
+                                }
+                            @endphp
+
+                            <td class="p-3 whitespace-nowrap">{{ $dateDisp }}</td>
                             <td class="p-3 whitespace-nowrap">
                                 @if ($entryId !== '')
                                     <a class="underline hover:text-indigo-700"
@@ -174,4 +211,3 @@
         </div>
     </div>
 @endsection
-

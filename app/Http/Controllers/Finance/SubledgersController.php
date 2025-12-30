@@ -121,6 +121,8 @@ class SubledgersController extends Controller
                 'limit' => (string) $limit,
             ]);
 
+            // dd($res);
+
             if (!($res['success'] ?? false)) {
                 $apiError = $res['message'] ?? 'Failed to load subledgers';
             } else {
@@ -201,6 +203,7 @@ class SubledgersController extends Controller
             'account_id' => $accountId,
         ]);
 
+        // dd($res);   
         $apiError = null;
         $rows = [];
         $opening = null;

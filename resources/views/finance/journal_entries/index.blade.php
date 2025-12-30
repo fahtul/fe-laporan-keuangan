@@ -64,8 +64,25 @@
 
                             $balanceBadge = $balanced ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
 
-                            $d = $e['date'] ?? null;
-                            $dateLabel = $d ? \Illuminate\Support\Carbon::parse($d)->toDateString() : '';
+                            // date is DATE-ONLY; avoid timezone shift
+                            $dRaw = (string) ($e['date'] ?? '');
+                            $dateLabel = $dRaw !== '' ? substr($dRaw, 0, 10) : '';
+
+                            $entryTypeRaw = (string) ($e['entry_type'] ?? ($e['entryType'] ?? ''));
+                            $entryType = in_array($entryTypeRaw, ['opening', 'closing'], true) ? $entryTypeRaw : 'manual';
+                            $typeBadge =
+                                $entryType === 'opening'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : ($entryType === 'closing'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : 'bg-gray-100 text-gray-800');
+
+                            $memoRaw = (string) ($e['memo'] ?? '');
+                            $memoLabel = trim($memoRaw) !== '' ? $memoRaw : '-';
+                            if ($entryType === 'opening' && ($memoLabel === '-' || trim($memoLabel) === '')) {
+                                $yr = $dateLabel !== '' ? substr($dateLabel, 0, 4) : '';
+                                $memoLabel = $yr !== '' ? ('Opening Balance ' . $yr) : 'Opening Balance';
+                            }
 
                             $canWrite = in_array(auth()->user()->role, ['admin', 'accountant']);
                             $isDraft = $st === 'draft';
@@ -75,7 +92,12 @@
                             <td class="p-3">{{ $dateLabel }}</td>
 
                             <td class="p-3">
-                                <div class="font-medium">{{ $e['memo'] ?? '-' }}</div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <div class="font-medium">{{ $memoLabel }}</div>
+                                    <span class="inline-flex px-2 py-0.5 rounded text-[11px] {{ $typeBadge }}">
+                                        {{ $entryType }}
+                                    </span>
+                                </div>
                                 <div class="text-xs text-gray-500">{{ $e['id'] ?? '' }}</div>
                             </td>
 
