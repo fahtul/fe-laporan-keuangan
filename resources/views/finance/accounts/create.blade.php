@@ -3,6 +3,12 @@
 
 @section('content')
     <div class="bg-white border rounded p-4 max-w-xl">
+        @if (!empty($parentsError))
+            <div class="p-3 rounded bg-yellow-100 text-yellow-800 mb-3">
+                {{ $parentsError }}
+            </div>
+        @endif
+
         @if (session('restoreCandidate'))
             @php $c = session('restoreCandidate'); @endphp
             <div class="p-3 rounded bg-yellow-50 border border-yellow-200 text-yellow-900 mb-3">
@@ -43,7 +49,7 @@
 
             <div>
                 <label class="block text-sm mb-1">Cash Flow Category (optional)</label>
-                @php $cfOld = old('cf_activity', ''); @endphp
+                @php $cfOld = (string) old('cf_activity', ''); @endphp
                 <select name="cf_activity" class="border rounded p-2 w-full">
                     <option value="" {{ $cfOld === '' ? 'selected' : '' }}>— Default (Operating) —</option>
                     <option value="cash" {{ $cfOld === 'cash' ? 'selected' : '' }}>cash</option>
@@ -74,31 +80,60 @@
             {{-- PARENT ACCOUNT --}}
             <div>
                 <label class="block text-sm mb-1">Parent Account (optional)</label>
-                @php $parentOld = old('parent_id', ''); @endphp
                 <select id="parentSelect" name="parent_id" class="border rounded p-2 w-full">
                     <option value="">— No Parent —</option>
-                    {{-- options injected by JS based on selected type --}}
                 </select>
                 <p class="text-xs text-gray-500 mt-1">
                     Parent biasanya akun header/grup (is_postable = false) dan harus satu type.
                 </p>
             </div>
 
-            {{-- IS_POSTABLE --}}
-            <div class="border rounded p-3">
-                {{-- ensure boolean always sent --}}
-                <input type="hidden" name="is_postable" value="0">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="border rounded p-3">
+                    <input type="hidden" name="is_postable" value="0">
+                    @php $postableOld = old('is_postable', '1'); @endphp
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="is_postable" value="1" class="rounded"
+                            {{ (string) $postableOld === '1' ? 'checked' : '' }}>
+                        <span class="text-sm font-medium">Postable</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Matikan jika akun ini hanya header/grup.</p>
+                </div>
 
-                @php $postableOld = old('is_postable', 1); @endphp
-                <label class="inline-flex items-center gap-2">
-                    <input id="postableCheckbox" type="checkbox" name="is_postable" value="1" class="rounded"
-                        {{ (string) $postableOld === '1' ? 'checked' : '' }}>
-                    <span class="text-sm font-medium">Postable (bisa dipakai transaksi)</span>
-                </label>
+                <div class="border rounded p-3">
+                    <input type="hidden" name="is_active" value="0">
+                    @php $activeOld = old('is_active', '1'); @endphp
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="is_active" value="1" class="rounded"
+                            {{ (string) $activeOld === '1' ? 'checked' : '' }}>
+                        <span class="text-sm font-medium">Active</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Nonaktifkan jika tidak dipakai.</p>
+                </div>
+            </div>
 
-                <p class="text-xs text-gray-500 mt-1">
-                    Matikan jika akun ini hanya header/grup.
-                </p>
+            <div class="border rounded p-3 space-y-3">
+                <div>
+                    <input type="hidden" name="requires_bp" value="0">
+                    @php $requiresBpOld = old('requires_bp', '0'); @endphp
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="requires_bp" value="1" class="rounded"
+                            {{ (string) $requiresBpOld === '1' ? 'checked' : '' }}>
+                        <span class="text-sm font-medium">Requires Business Partner</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Centang jika transaksi akun ini wajib pilih BP.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm mb-1">Subledger (optional)</label>
+                    @php $subledgerOld = (string) old('subledger', ''); @endphp
+                    <select name="subledger" class="border rounded p-2 w-full">
+                        <option value="" {{ $subledgerOld === '' ? 'selected' : '' }}>— None —</option>
+                        <option value="ar" {{ $subledgerOld === 'ar' ? 'selected' : '' }}>ar</option>
+                        <option value="ap" {{ $subledgerOld === 'ap' ? 'selected' : '' }}>ap</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Isi jika akun ini punya subledger AR/AP (opsional).</p>
+                </div>
             </div>
 
             <div class="flex gap-2">
@@ -113,21 +148,15 @@
             const typeSelect = document.getElementById('typeSelect');
             const normalBalance = document.getElementById('normalBalance');
             const parentSelect = document.getElementById('parentSelect');
-            const postableCheckbox = document.getElementById('postableCheckbox');
 
-            // parents injected from backend
-            // expected item shape: {id, code, name, type, is_postable}
             const parents = @json($parents ?? []);
-
             const parentOld = @json(old('parent_id', ''));
-            let firstLoad = true;
 
             function calcNormalBalance(type) {
                 return (type === 'asset' || type === 'expense') ? 'debit' : 'credit';
             }
 
             function normalizeBool(v, fallback = true) {
-                // handle true/false, 1/0, "true"/"false"
                 if (v === null || v === undefined) return fallback;
                 if (typeof v === 'boolean') return v;
                 if (typeof v === 'number') return v === 1;
@@ -141,11 +170,8 @@
 
             function renderParentOptions() {
                 const currentType = typeSelect.value;
-
-                // keep the first option only
                 parentSelect.innerHTML = '<option value="">— No Parent —</option>';
 
-                // rule: only show parent candidates that match type and are NOT postable (header accounts)
                 const filtered = (parents || []).filter(p => {
                     const isPostable = normalizeBool(p.is_postable, true);
                     return p.type === currentType && isPostable === false;
@@ -158,47 +184,26 @@
                     parentSelect.appendChild(opt);
                 });
 
-                // restore selected on first load
-                if (firstLoad && parentOld) {
+                if (parentOld) {
                     parentSelect.value = parentOld;
                 }
 
-                // if selected parent doesn't exist after filtering, reset
-                if (parentSelect.value && !Array.from(parentSelect.options).some(o => o.value === parentSelect
-                        .value)) {
+                if (parentSelect.value && !Array.from(parentSelect.options).some(o => o.value === parentSelect.value)) {
                     parentSelect.value = '';
                 }
-
-                syncPostableFromParent();
             }
 
             function syncNormalBalance() {
                 normalBalance.value = calcNormalBalance(typeSelect.value);
             }
 
-            // events
             typeSelect.addEventListener('change', function() {
                 syncNormalBalance();
                 renderParentOptions();
             });
 
-            function syncPostableFromParent() {
-                if (parentSelect.value) {
-                    postableCheckbox.checked = true;
-                } else {
-                    postableCheckbox.checked = false;
-                }
-            }
-
-            parentSelect.addEventListener('change', function() {
-                syncPostableFromParent();
-            });
-
-            // init
             syncNormalBalance();
             renderParentOptions();
-            syncPostableFromParent();
-            firstLoad = false;
         });
     </script>
 @endsection

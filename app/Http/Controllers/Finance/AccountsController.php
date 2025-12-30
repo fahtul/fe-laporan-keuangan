@@ -9,6 +9,28 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class AccountsController extends Controller
 {
+    private function unwrapData($json)
+    {
+        if (!is_array($json)) {
+            return null;
+        }
+
+        // Some endpoints return: {status, data: ..., meta: ...}
+        // Keep meta when it exists so pagination works.
+        if (array_key_exists('status', $json) && array_key_exists('data', $json)) {
+            if (array_key_exists('meta', $json)) {
+                return [
+                    'data' => $json['data'],
+                    'meta' => $json['meta'],
+                ];
+            }
+
+            return $json['data'];
+        }
+
+        return $json;
+    }
+
     private function fetchParents()
     {
         // ambil banyak untuk dropdown parent
@@ -21,14 +43,18 @@ class AccountsController extends Controller
             return [[], $res['message'] ?? 'Failed load parents'];
         }
 
-        $parents = collect($res['data']['data'] ?? [])
+        $payload = $this->unwrapData($res['data'] ?? null) ?? [];
+        $items = data_get($payload, 'data', $payload);
+        $items = is_array($items) ? $items : [];
+
+        $parents = collect($items)
             ->map(function ($a) {
                 return [
-                    'id' => $a['id'] ?? null,
-                    'code' => $a['code'] ?? '',
-                    'name' => $a['name'] ?? '',
-                    'type' => $a['type'] ?? '',
-                    'is_postable' => (bool)($a['is_postable'] ?? true),
+                    'id' => data_get($a, 'id'),
+                    'code' => (string) data_get($a, 'code', ''),
+                    'name' => (string) data_get($a, 'name', ''),
+                    'type' => (string) data_get($a, 'type', ''),
+                    'is_postable' => (bool) data_get($a, 'is_postable', true),
                 ];
             })
             ->filter(fn($a) => !empty($a['id']))
@@ -50,8 +76,25 @@ class AccountsController extends Controller
             'limit' => $limit,
         ]);
 
-        $items = $res['data']['data'] ?? [];
-        $meta  = $res['data']['meta'] ?? ['total' => 0, 'page' => $page, 'limit' => $limit];
+        $payload = $this->unwrapData($res['data'] ?? null) ?? [];
+        $items = data_get($payload, 'data', $payload);
+        $items = is_array($items) ? $items : [];
+
+        $meta = data_get($payload, 'meta');
+        if (!is_array($meta)) {
+            $meta = ['total' => count($items), 'page' => $page, 'limit' => $limit];
+        }
+
+        // Prefer backend meta for pagination truth.
+        $page = (int) data_get($meta, 'page', $page);
+        $limit = (int) data_get($meta, 'limit', $limit);
+        $total = data_get($meta, 'total');
+        $totalPages = data_get($meta, 'totalPages');
+
+        if ($total === null && $totalPages !== null) {
+            $total = (int) $totalPages * (int) $limit;
+        }
+        $total = (int) ($total ?? count($items));
 
         // map parent_id => "CODE - NAME" supaya index bisa tampil parent yang readable
         [$allAccounts, $parentsErr] = $this->fetchParents();
@@ -62,9 +105,9 @@ class AccountsController extends Controller
 
         $paginator = new LengthAwarePaginator(
             $items,
-            (int) ($meta['total'] ?? 0),
-            (int) ($meta['limit'] ?? $limit),
-            (int) ($meta['page'] ?? $page),
+            $total,
+            $limit,
+            $page,
             [
                 'path' => route('finance.accounts.index'),
                 'query' => $request->query(),
@@ -75,6 +118,7 @@ class AccountsController extends Controller
             'accounts' => $paginator,
             'q' => $q,
             'limit' => $limit,
+            'meta' => $meta,
             'parentMap' => $parentMap,
             'apiError' => ($res['success'] ?? false) ? null : ($res['message'] ?? 'Failed'),
             // kalau mau tampilkan error parents, bisa digabungkan
@@ -98,26 +142,41 @@ class AccountsController extends Controller
             'code' => 'required|string|max:50',
             'name' => 'required|string|max:200',
             'type' => 'required|in:asset,liability,equity,revenue,expense',
-            'cf_activity' => 'nullable|in:cash,operating,investing,financing',
 
-            // baru:
             'parent_id' => 'nullable|string|max:50',
-            'is_postable' => 'required', // karena di form kita kirim hidden 0 + checkbox 1
+            'is_postable' => 'required|in:0,1',
+            'is_active' => 'required|in:0,1',
+            'requires_bp' => 'required|in:0,1',
+            'subledger' => 'nullable|string|max:50',
+            'cf_activity' => 'nullable|in:cash,operating,investing,financing',
         ]);
 
         // rapikan empty string -> null
         $payload['parent_id'] = ($payload['parent_id'] ?? null) ?: null;
+        $payload['subledger'] = ($payload['subledger'] ?? null) ?: null;
         $payload['cf_activity'] = ($payload['cf_activity'] ?? null) ?: null;
 
-        $payload['is_postable'] = ((string) ($payload['is_postable'] ?? '0') === '1');
+        $payload = [
+            'code' => (string) $payload['code'],
+            'name' => (string) $payload['name'],
+            'type' => (string) $payload['type'],
+            'parent_id' => $payload['parent_id'],
+            'is_postable' => ((string) $payload['is_postable'] === '1'),
+            'is_active' => ((string) $payload['is_active'] === '1'),
+            'requires_bp' => ((string) $payload['requires_bp'] === '1'),
+            'subledger' => $payload['subledger'],
+            'cf_activity' => $payload['cf_activity'],
+        ];
+
         $res = FinanceApiHelper::post('/v1/accounts', $payload);
 
         if (!($res['success'] ?? false)) {
             if (($res['error_code'] ?? null) === 'ACCOUNT_SOFT_DELETED') {
+                $candidate = $this->unwrapData($res['data'] ?? null) ?? [];
                 return back()
                     ->withErrors(['api' => $res['message'] ?? 'Gagal'])
                     ->withInput()
-                    ->with('restoreCandidate', data_get($res, 'data.data') ?? data_get($res, 'data'));
+                    ->with('restoreCandidate', $candidate);
             }
 
             return back()->withErrors(['api' => $res['message'] ?? 'Gagal'])->withInput();
@@ -141,12 +200,11 @@ class AccountsController extends Controller
 
     public function edit(string $id)
     {
-        // sementara: ambil list lalu cari id (sesuai kode kamu)
-        $res = FinanceApiHelper::get('/v1/accounts', ['page' => 1, 'limit' => 100]);
-        if (!($res['success'] ?? false)) abort(500, $res['message'] ?? 'Failed');
+        $res = FinanceApiHelper::get("/v1/accounts/{$id}");
+        abort_if(!($res['success'] ?? false), 500, $res['message'] ?? 'Failed');
 
-        $account = collect($res['data']['data'] ?? [])->firstWhere('id', $id);
-        abort_if(!$account, 404);
+        $account = $this->unwrapData($res['data'] ?? null);
+        abort_if(!is_array($account) || empty(data_get($account, 'id')), 404);
 
         // parent candidates
         [$parents, $parentsError] = $this->fetchParents();
@@ -162,20 +220,25 @@ class AccountsController extends Controller
     public function update(string $id, Request $request)
     {
         $payload = $request->validate([
-            'code' => 'required|string|max:50',
             'name' => 'required|string|max:200',
-            'type' => 'required|in:asset,liability,equity,revenue,expense',
+            'is_postable' => 'required|in:0,1',
+            'is_active' => 'required|in:0,1',
+            'requires_bp' => 'required|in:0,1',
+            'subledger' => 'nullable|string|max:50',
             'cf_activity' => 'nullable|in:cash,operating,investing,financing',
-
-            // baru:
-            'parent_id' => 'nullable|string|max:50',
-            'is_postable' => 'required',
         ]);
 
-        $payload['parent_id'] = ($payload['parent_id'] ?? null) ?: null;
+        $payload['subledger'] = ($payload['subledger'] ?? null) ?: null;
         $payload['cf_activity'] = ($payload['cf_activity'] ?? null) ?: null;
-        $payload['is_postable'] = ((string)($payload['is_postable'] ?? '0') === '1');
 
+        $payload = [
+            'name' => (string) $payload['name'],
+            'is_postable' => ((string) $payload['is_postable'] === '1'),
+            'is_active' => ((string) $payload['is_active'] === '1'),
+            'requires_bp' => ((string) $payload['requires_bp'] === '1'),
+            'subledger' => $payload['subledger'],
+            'cf_activity' => $payload['cf_activity'],
+        ];
 
         $res = FinanceApiHelper::put("/v1/accounts/{$id}", $payload);
 

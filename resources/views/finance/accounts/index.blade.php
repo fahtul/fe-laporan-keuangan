@@ -5,6 +5,7 @@
 
 @section('header_actions')
     @if (in_array(auth()->user()->role, ['admin', 'accountant']))
+        <a href="{{ route('finance.accounts.import.index') }}" class="px-4 py-2 rounded border bg-white">Import COA</a>
         <a href="{{ route('finance.accounts.create') }}" class="px-4 py-2 rounded bg-black text-white">+ New</a>
     @endif
 @endsection

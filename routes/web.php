@@ -15,6 +15,8 @@ use App\Http\Controllers\Finance\TrialBalanceController;
 use App\Http\Controllers\Finance\SubledgersController;
 use App\Http\Controllers\Finance\WorksheetController;
 use App\Http\Controllers\Finance\ClosingsController;
+use App\Http\Controllers\Finance\AccountsImportController;
+use App\Http\Controllers\Finance\ReportExportsController;
 use App\Http\Controllers\ProfileController;
 use App\Services\Finance\FinanceApiClient;
 use App\Services\Finance\FinanceBffToken;
@@ -152,6 +154,11 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
         Route::get('/accounts', [AccountsController::class, 'index'])->name('finance.accounts.index');
 
         Route::middleware('finance.access:admin,accountant')->group(function () {
+            Route::get('/accounts/import', [AccountsImportController::class, 'index'])->name('finance.accounts.import.index');
+            Route::post('/accounts/import', [AccountsImportController::class, 'store'])->name('finance.accounts.import.store');
+            Route::get('/accounts/import/template/hospital_v1.csv', [AccountsImportController::class, 'downloadHospitalTemplate'])
+                ->name('finance.accounts.import.template.hospital_v1');
+
             Route::get('/accounts/create', [AccountsController::class, 'create'])->name('finance.accounts.create');
             Route::post('/accounts', [AccountsController::class, 'store'])->name('finance.accounts.store');
 
@@ -306,6 +313,13 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
         Route::post('/year-end', [ClosingsController::class, 'store'])
             ->middleware('finance.access:admin,accountant')
             ->name('finance.closings.year_end.store');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/exports/{report}.xlsx', [ReportExportsController::class, 'exportXlsx'])
+            ->name('finance.exports.xlsx');
     });
      
 

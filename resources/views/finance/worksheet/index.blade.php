@@ -16,6 +16,21 @@
 @section('subtitle', 'Worksheet (Neraca Awal, Mutasi, Saldo, L/R, Neraca Akhir)')
 
 @section('header_actions')
+    @php
+        $exportParams = array_merge([
+            'year' => $year,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'include_zero' => $includeZero ? '1' : '0',
+            'include_header' => $includeHeader ? '1' : '0',
+            'include_virtual_profit' => $includeVirtualProfit ? '1' : '0',
+            'use_code_rule' => $useCodeRule ? '1' : '0',
+        ], request()->query());
+    @endphp
+    <a class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700"
+        href="{{ route('finance.exports.xlsx', array_merge(['report' => 'worksheet'], $exportParams)) }}">
+        Export Excel
+    </a>
     <a class="px-4 py-2 rounded border bg-white text-gray-900 hover:bg-gray-50"
         href="{{ route('finance.worksheet.index', ['year' => $year]) }}">Reset</a>
 @endsection
@@ -340,4 +355,3 @@
         })();
     </script>
 @endsection
-

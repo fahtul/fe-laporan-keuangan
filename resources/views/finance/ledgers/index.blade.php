@@ -4,6 +4,24 @@
 @section('subtitle', 'General Ledger (saldo berjalan)')
 
 @section('header_actions')
+    @if (!empty($accountId))
+        @php
+            $exportParams = array_merge([
+                'year' => $year,
+                'account_id' => $accountId,
+                'from_date' => $fromDate,
+                'to_date' => $toDate,
+            ], request()->query());
+        @endphp
+        <a class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700"
+            href="{{ route('finance.exports.xlsx', array_merge(['report' => 'ledger'], $exportParams)) }}">
+            Export Excel
+        </a>
+    @else
+        <span class="px-4 py-2 rounded bg-emerald-600 text-white opacity-50 cursor-not-allowed" title="Pilih akun dulu">
+            Export Excel
+        </span>
+    @endif
     <a class="px-4 py-2 rounded border" href="{{ route('finance.ledgers.index', ['year' => $year]) }}">Reset</a>
 @endsection
 

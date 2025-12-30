@@ -43,6 +43,19 @@
 @section('subtitle', 'Balance Sheet (posisi per tanggal)')
 
 @section('header_actions')
+    @php
+        $exportParams = array_merge([
+            'year' => $year,
+            'as_of' => $asOf,
+            'include_zero' => $includeZero ? '1' : '0',
+            'include_header' => $includeHeader ? '1' : '0',
+            'profit_basis' => $profitBasis,
+        ], request()->query());
+    @endphp
+    <a class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700"
+        href="{{ route('finance.exports.xlsx', array_merge(['report' => 'balance-sheet'], $exportParams)) }}">
+        Export Excel
+    </a>
     <a class="px-4 py-2 rounded border bg-white"
         href="{{ route('finance.balance_sheet.index', ['year' => $year]) }}">Reset</a>
 @endsection
@@ -328,4 +341,3 @@
         </div>
     </div>
 @endsection
-

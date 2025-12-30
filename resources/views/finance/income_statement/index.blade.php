@@ -8,6 +8,22 @@
 @section('subtitle', 'Income Statement')
 
 @section('header_actions')
+    @php
+        $exportParams = array_merge([
+            'year' => $year,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'include_zero' => $includeZero ? '1' : '0',
+            'include_header' => $includeHeader ? '1' : '0',
+        ], request()->query());
+        if ($applyTax && !is_null($taxRateVal)) {
+            $exportParams['tax_rate'] = (string) $taxRateVal;
+        }
+    @endphp
+    <a class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700"
+        href="{{ route('finance.exports.xlsx', array_merge(['report' => 'income-statement'], $exportParams)) }}">
+        Export Excel
+    </a>
     <a class="px-4 py-2 rounded border" href="{{ route('finance.income_statement.index', ['year' => $year]) }}">
         Reset</a>
 @endsection

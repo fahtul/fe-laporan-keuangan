@@ -23,6 +23,23 @@
 @section('subtitle', 'Cash Flow (CFO/CFI/CFF)')
 
 @section('header_actions')
+    @php
+        $exportParams = array_merge([
+            'year' => $year,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'include_zero' => $includeZero ? '1' : '0',
+            'include_details' => $includeDetails ? '1' : '0',
+            'cash_prefix' => $cashPrefix,
+        ], request()->query());
+        if (!empty($cashAccountIds ?? [])) {
+            $exportParams['cash_account_ids'] = implode(',', $cashAccountIds);
+        }
+    @endphp
+    <a class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700"
+        href="{{ route('finance.exports.xlsx', array_merge(['report' => 'cash-flow'], $exportParams)) }}">
+        Export Excel
+    </a>
     <a class="px-4 py-2 rounded border bg-white" href="{{ route('finance.cash_flow.index', ['year' => $year]) }}">Reset</a>
     @if (in_array(auth()->user()->role ?? 'viewer', ['admin', 'accountant'], true))
         <a class="px-4 py-2 rounded border bg-white" href="{{ route('finance.accounts.cashflow_mapping.index') }}">
@@ -256,4 +273,3 @@
         </div>
     </div>
 @endsection
-

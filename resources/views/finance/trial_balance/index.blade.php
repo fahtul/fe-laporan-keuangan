@@ -4,6 +4,19 @@
 @section('subtitle', 'Trial Balance')
 
 @section('header_actions')
+    @php
+        $exportParams = array_merge([
+            'year' => $year,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'include_zero' => $includeZero ? '1' : '0',
+            'include_header' => $includeHeader ? '1' : '0',
+        ], request()->query());
+    @endphp
+    <a class="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700"
+        href="{{ route('finance.exports.xlsx', array_merge(['report' => 'trial-balance'], $exportParams)) }}">
+        Export Excel
+    </a>
     <a class="px-4 py-2 rounded border" href="{{ route('finance.trial_balance.index', ['year' => $year]) }}">Reset</a>
 @endsection
 

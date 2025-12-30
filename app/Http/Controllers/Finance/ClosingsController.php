@@ -116,7 +116,8 @@ class ClosingsController extends Controller
             $date = $year . '-12-31';
         }
 
-        $generateOpening = $request->boolean('generate_opening');
+        $generateOpening = (string) $request->input('generate_opening', '1');
+        $generateOpening = $generateOpening === '1' ? '1' : '0';
 
         $payload = [
             'year' => $year,
@@ -129,8 +130,15 @@ class ClosingsController extends Controller
         $res = FinanceApiHelper::post('/v1/closings/year-end', $payload);
 
         if (!($res['success'] ?? false)) {
+            $rawMessage = (string) ($res['message'] ?? 'Gagal menjalankan closing');
+            $msg = $rawMessage;
+            $lower = strtolower($rawMessage);
+            if (str_contains($lower, 'period') && (str_contains($lower, 'closed') || str_contains($lower, 'locked'))) {
+                $msg = 'Periode sudah ditutup, transaksi dengan tanggal itu tidak bisa diposting.';
+            }
+
             return back()
-                ->withErrors(['api' => $res['message'] ?? 'Gagal menjalankan closing'])
+                ->withErrors(['api' => $msg])
                 ->withInput();
         }
 
@@ -151,4 +159,3 @@ class ClosingsController extends Controller
             ]);
     }
 }
-

@@ -58,10 +58,13 @@
             @if (session('success'))
                 <div class="p-3 rounded bg-green-100 text-green-800">{{ session('success') }}</div>
             @endif
-            @if ($errors->any())
+            @php
+                $errorBag = $errors ?? session('errors');
+            @endphp
+            @if ($errorBag && $errorBag->any())
                 <div class="p-3 rounded bg-red-100 text-red-800">
                     <ul class="list-disc ml-5">
-                        @foreach ($errors->all() as $e)
+                        @foreach ($errorBag->all() as $e)
                             <li>{{ $e }}</li>
                         @endforeach
                     </ul>
