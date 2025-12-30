@@ -12,12 +12,9 @@ class BusinessPartnersController extends Controller
     private function categoryOptions(): array
     {
         return [
-            'customer' => 'Customer / Penjamin',
+            'customer' => 'Customer',
             'supplier' => 'Supplier',
-            'patient' => 'Pasien',
-            'doctor' => 'Dokter',
             'insurer' => 'Asuransi',
-            'employee' => 'Karyawan',
             'other' => 'Lainnya',
         ];
     }
@@ -30,22 +27,77 @@ class BusinessPartnersController extends Controller
         ];
     }
 
+    private function enrichCategoryOptionsForEdit(?string $currentCategory): array
+    {
+        $opts = $this->categoryOptions();
+
+        $currentCategory = $currentCategory !== null ? trim($currentCategory) : null;
+        if ($currentCategory && !array_key_exists($currentCategory, $opts)) {
+            $opts = [$currentCategory => "Legacy: {$currentCategory}"] + $opts;
+        }
+
+        return $opts;
+    }
+
+    public function options(Request $request)
+    {
+        $category = trim((string) $request->query('category', ''));
+        $q = trim((string) $request->query('q', ''));
+        $limit = (int) $request->query('limit', 100);
+
+        $params = [
+            'q' => $q,
+            'limit' => $limit > 0 ? $limit : 100,
+        ];
+
+        if ($category !== '') {
+            $params['category'] = $category;
+        }
+
+        $res = FinanceApiHelper::get('/v1/business-partners/options', $params);
+
+        if (!($res['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $res['message'] ?? 'Failed to load options',
+                'data' => [],
+            ]);
+        }
+
+        $json = $res['data'] ?? null;
+        $payload = data_get($json, 'data.data') ?? data_get($json, 'data') ?? [];
+        $items = is_array($payload) ? $payload : [];
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $q = (string) $request->query('q', '');
         $category = (string) $request->query('category', '');
-        $includeInactive = (string) $request->query('include_inactive', 'false');
+        $includeInactive = $request->boolean('include_inactive');
 
         $page = (int) $request->query('page', 1);
         $limit = (int) $request->query('limit', 20);
 
-        $res = FinanceApiHelper::get('/v1/business-partners', [
+        $params = [
             'q' => $q,
-            'role' => $category, // backend handler pakai query "role"
-            'include_inactive' => $includeInactive,
+            // backend cenderung pakai flag numeric/string, jadi kirim tegas 1/0
+            'include_inactive' => $includeInactive ? '1' : '0',
             'page' => $page,
             'limit' => $limit,
-        ]);
+        ];
+
+        // backend baru: filter pakai `category`, backend lama: mungkin masih pakai `role`
+        if (trim($category) !== '') {
+            $params['category'] = $category;
+            $params['role'] = $category;
+        }
+
+        $res = FinanceApiHelper::get('/v1/business-partners', $params);
 
         $items = data_get($res, 'data.data', []);
         $meta  = data_get($res, 'data.meta', [
@@ -90,10 +142,15 @@ class BusinessPartnersController extends Controller
         $payload = $request->validate([
             'code' => 'required|string|max:50',
             'name' => 'required|string|max:200',
-            'category' => 'nullable|string|max:50',
-            'normal_balance' => 'nullable|string|max:50',
+            'category' => 'nullable|in:customer,supplier,insurer,other,vendor,insurance',
+            'normal_balance' => 'nullable|in:debit,credit',
             'is_active' => 'nullable|boolean',
         ]);
+
+        $category = (string) ($payload['category'] ?? '');
+        if ($category === 'vendor') $category = 'supplier';
+        if ($category === 'insurance') $category = 'insurer';
+        $payload['category'] = $category !== '' ? $category : null;
 
         // checkbox handling
         $payload['is_active'] = $request->has('is_active');
@@ -101,8 +158,27 @@ class BusinessPartnersController extends Controller
         $res = FinanceApiHelper::post('/v1/business-partners', $payload);
 
         if (!($res['success'] ?? false)) {
+            $errorCode = $res['error_code'] ?? data_get($res, 'data.error_code');
+
+            $errUp = is_string($errorCode) ? strtoupper($errorCode) : '';
+            $isDup =
+                ($errUp !== '' && str_contains($errUp, 'DUPLICATE'))
+                || ($errUp !== '' && str_contains($errUp, 'CODE') && (str_contains($errUp, 'EXIST') || str_contains($errUp, 'UNIQUE')));
+
+            if ($isDup) {
+                return back()
+                    ->withErrors(['code' => 'Code sudah dipakai. Gunakan code lain.'])
+                    ->withInput();
+            }
+
+            $msg = (string) ($res['message'] ?? 'Gagal menyimpan');
+            if (str_contains(strtolower($msg), 'code') && (str_contains(strtolower($msg), 'exist') || str_contains(strtolower($msg), 'unique') || str_contains(strtolower($msg), 'duplicate'))) {
+                return back()
+                    ->withErrors(['code' => $msg])
+                    ->withInput();
+            }
+
             // handle soft-deleted hint (dari BE handler)
-            $errorCode = data_get($res, 'data.error_code');
             $restoreData = data_get($res, 'data.data');
 
             return back()
@@ -128,7 +204,7 @@ class BusinessPartnersController extends Controller
         $item = data_get($res, 'data.data', []);
         return view('finance.business_partners.edit', [
             'item' => $item,
-            'categoryOptions' => $this->categoryOptions(),
+            'categoryOptions' => $this->enrichCategoryOptionsForEdit(data_get($item, 'category')),
             'normalBalanceOptions' => $this->normalBalanceOptions(),
         ]);
     }
@@ -138,16 +214,41 @@ class BusinessPartnersController extends Controller
         $payload = $request->validate([
             'code' => 'required|string|max:50',
             'name' => 'required|string|max:200',
-            'category' => 'nullable|string|max:50',
-            'normal_balance' => 'nullable|string|max:50',
+            'category' => 'nullable|in:customer,supplier,insurer,other,vendor,insurance',
+            'normal_balance' => 'nullable|in:debit,credit',
             'is_active' => 'nullable|boolean',
         ]);
+
+        $category = (string) ($payload['category'] ?? '');
+        if ($category === 'vendor') $category = 'supplier';
+        if ($category === 'insurance') $category = 'insurer';
+        $payload['category'] = $category !== '' ? $category : null;
 
         $payload['is_active'] = $request->has('is_active');
 
         $res = FinanceApiHelper::put("/v1/business-partners/{$id}", $payload);
 
         if (!($res['success'] ?? false)) {
+            $errorCode = $res['error_code'] ?? data_get($res, 'data.error_code');
+
+            $errUp = is_string($errorCode) ? strtoupper($errorCode) : '';
+            $isDup =
+                ($errUp !== '' && str_contains($errUp, 'DUPLICATE'))
+                || ($errUp !== '' && str_contains($errUp, 'CODE') && (str_contains($errUp, 'EXIST') || str_contains($errUp, 'UNIQUE')));
+
+            if ($isDup) {
+                return back()
+                    ->withErrors(['code' => 'Code sudah dipakai. Gunakan code lain.'])
+                    ->withInput();
+            }
+
+            $msg = (string) ($res['message'] ?? 'Gagal update');
+            if (str_contains(strtolower($msg), 'code') && (str_contains(strtolower($msg), 'exist') || str_contains(strtolower($msg), 'unique') || str_contains(strtolower($msg), 'duplicate'))) {
+                return back()
+                    ->withErrors(['code' => $msg])
+                    ->withInput();
+            }
+
             return back()
                 ->withErrors(['api' => $res['message'] ?? 'Gagal update'])
                 ->withInput();

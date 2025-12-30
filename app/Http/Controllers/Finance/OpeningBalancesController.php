@@ -8,12 +8,43 @@ use Illuminate\Http\Request;
 
 class OpeningBalancesController extends Controller
 {
+    private function fetchAccountsMap(): array
+    {
+        $res = FinanceApiHelper::get('/v1/accounts', [
+            'page' => 1,
+            'limit' => 1000,
+            'q' => '',
+        ]);
+
+        if (!($res['success'] ?? false)) {
+            return [[], $res['message'] ?? 'Failed to load accounts'];
+        }
+
+        $items = data_get($res, 'data.data', []);
+        $map = collect($items)
+            ->mapWithKeys(function ($a) {
+                $id = $a['id'] ?? null;
+                if (!$id) return [];
+                return [
+                    $id => [
+                        'id' => $id,
+                        'code' => $a['code'] ?? '',
+                        'name' => $a['name'] ?? '',
+                        'type' => $a['type'] ?? '',
+                    ],
+                ];
+            })
+            ->all();
+
+        return [$map, null];
+    }
+
     private function fetchPostableAccounts(): array
     {
         // pakai endpoint accounts yang sudah ada (bukan /options)
         $res = FinanceApiHelper::get('/v1/accounts', [
             'page' => 1,
-            'limit' => 100,
+            'limit' => 1000,
             'q' => '',
         ]);
 
@@ -31,6 +62,8 @@ class OpeningBalancesController extends Controller
                     'name' => $a['name'] ?? '',
                     'type' => $a['type'] ?? '',
                     'is_postable' => (bool)($a['is_postable'] ?? true),
+                    'requires_bp' => (bool)($a['requires_bp'] ?? false),
+                    'subledger' => $a['subledger'] ?? null,
                 ];
             })
             ->filter(fn ($a) => !empty($a['id']) && (bool)($a['is_postable'] ?? true) === true)
@@ -46,18 +79,20 @@ class OpeningBalancesController extends Controller
         $deb   = $request->input('line_debit', []);
         $cred  = $request->input('line_credit', []);
         $memos = $request->input('line_memo', []);
+        $bpIds = $request->input('line_bp_id', []);
 
         $lines = [];
-        $count = max(count($ids), count($deb), count($cred), count($memos));
+        $count = max(count($ids), count($deb), count($cred), count($memos), count($bpIds));
 
         for ($i = 0; $i < $count; $i++) {
             $accountId = $ids[$i] ?? null;
             $debit  = (float) ($deb[$i] ?? 0);
             $credit = (float) ($cred[$i] ?? 0);
             $memo   = $memos[$i] ?? null;
+            $bpId   = $bpIds[$i] ?? null;
 
             // skip row kosong total
-            if (!$accountId && $debit == 0 && $credit == 0 && empty($memo)) continue;
+            if (!$accountId && $debit == 0 && $credit == 0 && empty($memo) && empty($bpId)) continue;
 
             if (!$accountId) {
                 throw new \InvalidArgumentException("Line #".($i+1).": account is required");
@@ -73,8 +108,11 @@ class OpeningBalancesController extends Controller
                 throw new \InvalidArgumentException("Line #".($i+1).": either debit or credit must be > 0");
             }
 
+            $bpId = $bpId !== null ? trim((string) $bpId) : '';
+
             $lines[] = [
                 'account_id' => $accountId,
+                'bp_id' => $bpId !== '' ? $bpId : null,
                 'debit' => round($debit, 2),
                 'credit' => round($credit, 2),
                 'memo' => ($memo !== null && trim((string)$memo) !== '') ? $memo : null,
@@ -102,9 +140,17 @@ class OpeningBalancesController extends Controller
             $opening = data_get($res, 'data.data', null);
         }
 
+        $accountsById = [];
+        if ($opening) {
+            [$accountsById, $accErr] = $this->fetchAccountsMap();
+            // kalau gagal load accounts, tetap render page; fallback akan tampil ID
+            unset($accErr);
+        }
+
         return view('finance.opening_balances.index', [
             'year' => $year,
             'opening' => $opening,
+            'accountsById' => $accountsById,
             'apiError' => ($res['success'] ?? false) ? null : ($res['message'] ?? 'Failed'),
         ]);
     }
@@ -135,6 +181,8 @@ class OpeningBalancesController extends Controller
             'line_debit' => 'required|array',
             'line_credit' => 'required|array',
             'line_memo' => 'nullable|array',
+            'line_bp_id' => 'nullable|array',
+            'line_bp_id.*' => 'nullable|string|max:100',
         ]);
 
         try {

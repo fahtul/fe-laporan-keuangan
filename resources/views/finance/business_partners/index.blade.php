@@ -3,9 +3,18 @@
 @section('subtitle', 'Daftar pihak (supplier/pasien/asuransi/dll)')
 
 @section('header_actions')
-    <a href="{{ route('finance.business_partners.create') }}" class="px-4 py-2 rounded bg-black text-white">
-        + Tambah
-    </a>
+    @php
+        $canWrite = in_array(auth()->user()->role ?? 'viewer', ['admin', 'accountant'], true);
+    @endphp
+
+    @if ($canWrite)
+        <a href="{{ route('finance.business-partners.import') }}" class="px-4 py-2 rounded border bg-white text-gray-900 hover:bg-gray-50">
+            Import
+        </a>
+        <a href="{{ route('finance.business_partners.create') }}" class="px-4 py-2 rounded bg-black text-white">
+            + Tambah
+        </a>
+    @endif
 @endsection
 
 @section('content')
@@ -64,7 +73,7 @@
             <div class="flex items-end gap-2">
                 <label class="inline-flex items-center gap-2 text-sm">
                     <input type="checkbox" name="include_inactive" value="true"
-                        {{ $include_inactive === 'true' ? 'checked' : '' }}>
+                        {{ !empty($include_inactive) ? 'checked' : '' }}>
                     <span>Tampilkan non-aktif</span>
                 </label>
 

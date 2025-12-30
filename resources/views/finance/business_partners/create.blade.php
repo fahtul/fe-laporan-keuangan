@@ -45,7 +45,8 @@
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm mb-1">Code</label>
-                    <input name="code" value="{{ old('code') }}" class="border rounded w-full px-3 py-2" required>
+                    <input id="bpCode" name="code" value="{{ old('code') }}" class="border rounded w-full px-3 py-2"
+                        required>
                 </div>
                 <div>
                     <label class="block text-sm mb-1">Nama</label>
@@ -56,9 +57,10 @@
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm mb-1">Kategori</label>
-                    <select name="category" class="border rounded w-full px-3 py-2">
+                    @php $catVal = old('category', 'other'); @endphp
+                    <select name="category" class="border rounded w-full px-3 py-2" id="bpCategory">
                         @foreach ($categoryOptions as $k => $label)
-                            <option value="{{ $k }}" {{ old('category', 'other') === $k ? 'selected' : '' }}>
+                            <option value="{{ $k }}" {{ $catVal === $k ? 'selected' : '' }}>
                                 {{ $label }}
                             </option>
                         @endforeach
@@ -66,10 +68,15 @@
                 </div>
                 <div>
                     <label class="block text-sm mb-1">Normal Balance</label>
-                    <select name="normal_balance" class="border rounded w-full px-3 py-2">
+                    @php
+                        $normalVal = old('normal_balance');
+                        if ($normalVal === null) {
+                            $normalVal = $catVal === 'supplier' ? 'credit' : 'debit';
+                        }
+                    @endphp
+                    <select name="normal_balance" class="border rounded w-full px-3 py-2" id="bpNormalBalance">
                         @foreach ($normalBalanceOptions as $k => $label)
-                            <option value="{{ $k }}"
-                                {{ old('normal_balance', 'debit') === $k ? 'selected' : '' }}>
+                            <option value="{{ $k }}" {{ (string) $normalVal === $k ? 'selected' : '' }}>
                                 {{ $label }}
                             </option>
                         @endforeach
@@ -88,4 +95,45 @@
             </div>
         </form>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const code = document.getElementById('bpCode');
+            const category = document.getElementById('bpCategory');
+            const normal = document.getElementById('bpNormalBalance');
+
+            let normalTouched = @json(old('normal_balance') !== null);
+
+            function defaultNormalBalance(cat) {
+                if (cat === 'supplier') return 'credit';
+                if (cat === 'customer') return 'debit';
+                if (cat === 'insurer') return 'debit';
+                return 'debit';
+            }
+
+            if (code) {
+                code.addEventListener('input', function() {
+                    const start = code.selectionStart;
+                    const end = code.selectionEnd;
+                    code.value = (code.value || '').toUpperCase();
+                    try {
+                        code.setSelectionRange(start, end);
+                    } catch (e) {}
+                });
+            }
+
+            if (normal) {
+                normal.addEventListener('change', function() {
+                    normalTouched = true;
+                });
+            }
+
+            if (category && normal) {
+                category.addEventListener('change', function() {
+                    if (normalTouched) return;
+                    normal.value = defaultNormalBalance(category.value);
+                });
+            }
+        });
+    </script>
 @endsection

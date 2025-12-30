@@ -5,6 +5,7 @@ use App\Http\Controllers\Finance\AccountsController;
 use App\Http\Controllers\Finance\BalanceSheetController;
 use App\Http\Controllers\Finance\AccountsCashflowMappingController;
 use App\Http\Controllers\Finance\BusinessPartnersController;
+use App\Http\Controllers\Finance\BusinessPartnersImportController;
 use App\Http\Controllers\Finance\CashFlowController;
 use App\Http\Controllers\Finance\EquityStatementController;
 use App\Http\Controllers\Finance\JournalEntriesController;
@@ -192,11 +193,14 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
         Route::get('/business-partners', [BusinessPartnersController::class, 'index'])
             ->name('finance.business_partners.index');
 
+        Route::get('/business-partners/options', [BusinessPartnersController::class, 'options'])
+            ->name('finance.business_partners.options');
+
         Route::get('/business-partners/{id}/edit', [BusinessPartnersController::class, 'edit'])
             ->name('finance.business_partners.edit');
 
-        // ===== WRITE (admin/accountant saja) =====
-        Route::middleware('finance.access:admin,accountant')->group(function () {
+	        // ===== WRITE (admin/accountant saja) =====
+	        Route::middleware('finance.access:admin,accountant')->group(function () {
 
             // Journal Entries (punyamu)
             Route::get('/journal-entries/create', [JournalEntriesController::class, 'create'])
@@ -214,9 +218,16 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
             Route::post('/journal-entries/{id}/reverse', [JournalEntriesController::class, 'reverse'])
                 ->name('finance.journal_entries.reverse');
 
-            // Business Partners (WRITE)
-            Route::get('/business-partners/create', [BusinessPartnersController::class, 'create'])
-                ->name('finance.business_partners.create');
+	            // Business Partners (WRITE)
+	            Route::get('/business-partners/import', [BusinessPartnersImportController::class, 'index'])
+	                ->name('finance.business-partners.import');
+	            Route::post('/business-partners/import', [BusinessPartnersImportController::class, 'store'])
+	                ->name('finance.business-partners.import.store');
+	            Route::get('/business-partners/import/template/hospital_bp_v1.csv', [BusinessPartnersImportController::class, 'downloadHospitalTemplate'])
+	                ->name('finance.business-partners.import.template');
+
+	            Route::get('/business-partners/create', [BusinessPartnersController::class, 'create'])
+	                ->name('finance.business_partners.create');
 
             Route::post('/business-partners', [BusinessPartnersController::class, 'store'])
                 ->name('finance.business_partners.store');
@@ -232,7 +243,7 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
         });
     });
 
-    Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->prefix('finance')
     ->group(function () {
         Route::get('/opening-balances', [OpeningBalancesController::class, 'index'])
@@ -247,7 +258,7 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
         });
     });
 
-    Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->prefix('finance')
     ->group(function () {
         Route::get('/ledgers', [LedgersController::class, 'index'])
@@ -321,6 +332,6 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
         Route::get('/exports/{report}.xlsx', [ReportExportsController::class, 'exportXlsx'])
             ->name('finance.exports.xlsx');
     });
-     
+
 
 require __DIR__ . '/auth.php';

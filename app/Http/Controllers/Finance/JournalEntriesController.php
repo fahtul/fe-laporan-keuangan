@@ -39,16 +39,18 @@ class JournalEntriesController extends Controller
         $deb   = $request->input('line_debit', []);
         $cred  = $request->input('line_credit', []);
         $memos = $request->input('line_memo', []);
+        $bpIds = $request->input('line_bp_id', []);
 
         $lines = [];
 
-        $count = max(count($ids), count($deb), count($cred), count($memos));
+        $count = max(count($ids), count($deb), count($cred), count($memos), count($bpIds));
 
         for ($i = 0; $i < $count; $i++) {
             $accountId = $ids[$i] ?? null;
             $debit = (float) ($deb[$i] ?? 0);
             $credit = (float) ($cred[$i] ?? 0);
             $memo = $memos[$i] ?? null;
+            $bpId = $bpIds[$i] ?? null;
 
             // skip empty rows
             if (!$accountId && $debit == 0 && $credit == 0 && empty($memo)) {
@@ -78,6 +80,7 @@ class JournalEntriesController extends Controller
                 'debit' => $debit,
                 'credit' => $credit,
                 'memo' => $memo ?: null,
+                'bp_id' => $bpId ?: null,
             ];
         }
 
@@ -171,6 +174,8 @@ class JournalEntriesController extends Controller
             'line_debit' => 'required|array',
             'line_credit' => 'required|array',
             'line_memo' => 'nullable|array',
+            'line_bp_id' => 'nullable|array',
+            'line_bp_id.*' => 'nullable|string|max:100',
             'submit_action' => 'nullable|in:draft,post',
         ]);
 
@@ -262,6 +267,8 @@ class JournalEntriesController extends Controller
             'line_debit' => 'required|array',
             'line_credit' => 'required|array',
             'line_memo' => 'nullable|array',
+            'line_bp_id' => 'nullable|array',
+            'line_bp_id.*' => 'nullable|string|max:100',
         ]);
 
         try {

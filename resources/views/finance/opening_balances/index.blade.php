@@ -94,8 +94,15 @@
                         @forelse($lines as $l)
                             <tr class="border-t">
                                 <td class="p-3">
-                                    <div class="font-medium">{{ $l['account_id'] ?? '-' }}</div>
-                                    <div class="text-xs text-gray-500">Account ID</div>
+                                    @php
+                                        $accId = $l['account_id'] ?? null;
+                                        $acc = $accId ? ($accountsById[$accId] ?? null) : null;
+                                        $accLabel = $acc ? trim(($acc['code'] ?? '') . ' — ' . ($acc['name'] ?? '')) : null;
+                                    @endphp
+                                    <div class="font-medium">{{ $accLabel ?: ($accId ?? '-') }}</div>
+                                    @if ($accId)
+                                        <div class="text-xs text-gray-500">{{ $accId }}</div>
+                                    @endif
                                 </td>
                                 <td class="p-3 text-right">{{ number_format((float) ($l['debit'] ?? 0), 2, ',', '.') }}</td>
                                 <td class="p-3 text-right">{{ number_format((float) ($l['credit'] ?? 0), 2, ',', '.') }}
