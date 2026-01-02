@@ -87,7 +87,7 @@ class CashFlowController extends Controller
         }
 
         $res = FinanceApiHelper::get('/v1/cash-flow', $apiQuery);
-
+        // dd($res);
         $apiError = null;
         $period = [
             'from_date' => $fromDate,

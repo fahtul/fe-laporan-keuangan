@@ -51,54 +51,60 @@ class ClosingsController extends Controller
         return [$accounts, null];
     }
 
-    public function index(Request $request)
-    {
-        $year = (string) $request->query('year', now()->format('Y'));
-        if (!preg_match('/^\d{4}$/', $year)) {
-            $year = now()->format('Y');
-        }
-
-        $res = FinanceApiHelper::get('/v1/closings/year-end', [
-            'year' => $year,
-        ]);
-
-        $apiError = null;
-        $closing = null;
-        $isClosed = false;
-        $closingEntryId = null;
-        $openingEntryId = null;
-
-        if (!($res['success'] ?? false)) {
-            $apiError = $res['message'] ?? 'Failed to load closing status';
-        } else {
-            $json = $res['data'] ?? null;
-            $payload = data_get($json, 'data.data') ?? data_get($json, 'data') ?? null;
-
-            $closing = $payload;
-            $closingEntryId = data_get($payload, 'closing_entry_id')
-                ?? data_get($payload, 'closing_entry.id')
-                ?? data_get($payload, 'closingEntryId');
-            $openingEntryId = data_get($payload, 'opening_entry_id')
-                ?? data_get($payload, 'opening_entry.id')
-                ?? data_get($payload, 'openingEntryId');
-
-            $status = strtolower((string) (data_get($payload, 'status') ?? ''));
-            $isClosed = $status === 'closed' || $status === 'success' || !empty($closingEntryId);
-        }
-
-        [$equityAccounts, $accountsError] = $this->fetchEquityAccountOptions();
-
-        return view('finance.closings.year_end', [
-            'year' => $year,
-            'closing' => $closing,
-            'isClosed' => $isClosed,
-            'closingEntryId' => $closingEntryId,
-            'openingEntryId' => $openingEntryId,
-            'equityAccounts' => $equityAccounts,
-            'accountsError' => $accountsError,
-            'apiError' => $apiError,
-        ]);
+   public function index(Request $request)
+{
+    $year = (string) $request->query('year', now()->format('Y'));
+    if (!preg_match('/^\d{4}$/', $year)) {
+        $year = now()->format('Y');
     }
+
+    $res = FinanceApiHelper::get('/v1/closings/year-end', [
+        'year' => $year,
+    ]);
+
+    // dd($res); // <-- HAPUS ini
+
+    $apiError = null;
+    $closing = [];
+    $isClosed = false;
+    $closingEntryId = null;
+    $openingEntryId = null;
+
+    if (!($res['success'] ?? false)) {
+        $apiError = $res['message'] ?? 'Failed to load closing status';
+    } else {
+        $json = $res['data'] ?? null;
+        // struktur kamu: $res['data'] = ['status'=>'success','data'=>[...] ]
+        $payload = data_get($json, 'data') ?? [];
+
+        $closing = is_array($payload) ? $payload : [];
+
+        $closingEntryId = data_get($payload, 'closing_entry_id')
+            ?? data_get($payload, 'closing_entry.id')
+            ?? data_get($payload, 'closingEntryId');
+
+        $openingEntryId = data_get($payload, 'opening_entry_id')
+            ?? data_get($payload, 'opening_entry.id')
+            ?? data_get($payload, 'openingEntryId');
+
+        // gunakan flag dari API
+        $isClosed = (bool) data_get($payload, 'is_closed', false) || !empty($closingEntryId);
+    }
+
+    [$equityAccounts, $accountsError] = $this->fetchEquityAccountOptions();
+
+    return view('finance.closings.year_end', [
+        'year' => $year,
+        'closing' => $closing,
+        'isClosed' => $isClosed,
+        'closingEntryId' => $closingEntryId,
+        'openingEntryId' => $openingEntryId,
+        'equityAccounts' => $equityAccounts,
+        'accountsError' => $accountsError,
+        'apiError' => $apiError,
+    ]);
+}
+
 
     public function store(Request $request)
     {

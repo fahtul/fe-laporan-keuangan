@@ -72,7 +72,7 @@ class LedgersController extends Controller
 
         // account selected label untuk header
         $selectedAccount = collect($accounts)->firstWhere('id', $accountId);
-
+        // dd($ledger);
         return view('finance.ledgers.index', [
             'accounts' => $accounts,
             'accountsError' => $accountsError,
