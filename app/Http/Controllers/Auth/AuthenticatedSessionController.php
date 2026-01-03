@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -25,20 +26,18 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+        $request->session()->regenerate();
 
-        // ✅ sekarang baru ada user
-        if (! auth()->user()->is_active) {
-            Auth::guard('web')->logout();
+        if (! (bool) (Auth::user()?->is_active ?? true)) {
+            Auth::logout();
 
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return back()->withErrors([
-                'email' => 'Akun kamu sedang non-aktif. Hubungi admin.',
+            throw ValidationException::withMessages([
+                'email' => 'Akun Anda dinonaktifkan. Hubungi admin.',
             ]);
         }
-
-        $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
@@ -51,9 +50,9 @@ class AuthenticatedSessionController extends Controller
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');
     }
 }
+

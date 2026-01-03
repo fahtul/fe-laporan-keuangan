@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\UserAdminController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Finance\AccountsController;
 use App\Http\Controllers\Finance\BalanceSheetController;
 use App\Http\Controllers\Finance\AccountsCashflowMappingController;
@@ -32,6 +32,17 @@ Route::get('/', function () {
         ? redirect()->route('dashboard')
         : redirect()->route('login');
 })->name('home');
+
+// Disable self-register: always redirect/404 even if someone guesses the URL.
+Route::middleware('guest')->group(function () {
+    Route::get('/register', function () {
+        return redirect()->route('login');
+    })->name('register');
+
+    Route::post('/register', function () {
+        abort(404);
+    });
+});
 
 Route::get('/whoami', function () {
     return [
@@ -140,12 +151,18 @@ Route::get('/finance/db-info', function () {
 })->middleware('auth');
 
 
-Route::middleware(['auth'])->prefix('admin')->group(function () {
-    Route::get('/users', [UserAdminController::class, 'index'])->name('admin.users.index');
-
-    Route::post('/users/{user}/toggle-active', [UserAdminController::class, 'toggleActive'])
-        ->name('admin.users.toggleActive');
-});
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware(['auth', 'verified', 'role:admin'])
+    ->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::patch('/users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
+        Route::patch('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset');
+    });
 
 Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
     ->prefix('finance')
