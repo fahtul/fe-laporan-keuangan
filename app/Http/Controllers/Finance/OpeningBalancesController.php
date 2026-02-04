@@ -216,4 +216,30 @@ class OpeningBalancesController extends Controller
             ->route('finance.opening_balances.index', ['year' => $payload['opening_key']])
             ->with('success', 'Opening balance berhasil dibuat & POSTED');
     }
+
+    public function destroy(Request $request, string $id)
+    {
+        $year = (string) $request->query('year', now()->format('Y'));
+
+        $res = FinanceApiHelper::delete("/v1/opening-balances/{$id}");
+
+        if (!($res['success'] ?? false)) {
+            $status = (int) ($res['status'] ?? 0);
+            $msg = (string) ($res['message'] ?? 'Gagal delete opening balance');
+
+            if ($status === 404) {
+                $msg = 'Opening balance tidak ditemukan / sudah terhapus.';
+            } elseif ($status === 400) {
+                $msg = 'Data bukan opening balance atau request tidak valid.';
+            } elseif ($status === 403) {
+                $msg = 'Akses ditolak (role tidak diizinkan).';
+            }
+
+            return back()->withErrors(['api' => $msg]);
+        }
+
+        return redirect()
+            ->route('finance.opening_balances.index', ['year' => $year])
+            ->with('success', "Opening balance tahun {$year} berhasil dihapus.");
+    }
 }

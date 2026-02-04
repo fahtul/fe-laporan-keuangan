@@ -10,6 +10,18 @@
                 class="px-4 py-2 rounded bg-black text-white">
                 + Buat Opening Balance
             </a>
+        @else
+            @if (!empty($opening['id']))
+                <form method="POST" action="{{ route('finance.opening_balances.destroy', ['id' => $opening['id'], 'year' => $year]) }}"
+                    class="inline"
+                    onsubmit="return confirm('Yakin hapus opening balance tahun {{ $year }}? Ini akan soft delete jurnal opening beserta lines.')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">
+                        Delete
+                    </button>
+                </form>
+            @endif
         @endif
     @endif
 @endsection
@@ -34,6 +46,11 @@
 
         @if ($apiError)
             <div class="p-3 rounded bg-red-100 text-red-800 mb-3">{{ $apiError }}</div>
+        @endif
+        @if ($errors->any())
+            <div class="p-3 rounded bg-red-100 text-red-800 mb-3">
+                {{ $errors->first('api') ?? $errors->first() }}
+            </div>
         @endif
 
         @if (!$opening)
