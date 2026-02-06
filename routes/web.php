@@ -270,9 +270,6 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
 
             Route::post('/opening-balances', [OpeningBalancesController::class, 'store'])
                 ->name('finance.opening_balances.store');
-
-            Route::delete('/opening-balances/{id}', [OpeningBalancesController::class, 'destroy'])
-                ->name('finance.opening_balances.destroy');
         });
     });
 
