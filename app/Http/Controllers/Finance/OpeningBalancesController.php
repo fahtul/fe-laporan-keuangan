@@ -8,6 +8,15 @@ use Illuminate\Http\Request;
 
 class OpeningBalancesController extends Controller
 {
+    private function unwrapJsonData(array $res)
+    {
+        $json = $res['data'] ?? null;
+        if (!is_array($json)) return null;
+
+        // Supports: {status, data:{...}} and also nested {data:{data:{...}}}
+        return data_get($json, 'data.data') ?? data_get($json, 'data') ?? null;
+    }
+
     private function fetchAccountsMap(): array
     {
         $res = FinanceApiHelper::get('/v1/accounts', [
@@ -20,9 +29,12 @@ class OpeningBalancesController extends Controller
             return [[], $res['message'] ?? 'Failed to load accounts'];
         }
 
-        $items = data_get($res, 'data.data', []);
+        $payload = $this->unwrapJsonData($res);
+        $items = data_get($payload, 'data', $payload);
+        $items = is_array($items) ? $items : [];
         $map = collect($items)
             ->mapWithKeys(function ($a) {
+                $a = is_array($a) ? $a : (array) $a;
                 $id = $a['id'] ?? null;
                 if (!$id) return [];
                 return [
@@ -52,10 +64,12 @@ class OpeningBalancesController extends Controller
             return [[], $res['message'] ?? 'Failed to load accounts'];
         }
 
-        // response accounts kamu: $res['data']['data'] = items
-        $items = data_get($res, 'data.data', []);
+        $payload = $this->unwrapJsonData($res);
+        $items = data_get($payload, 'data', $payload);
+        $items = is_array($items) ? $items : [];
         $accounts = collect($items)
             ->map(function ($a) {
+                $a = is_array($a) ? $a : (array) $a;
                 return [
                     'id' => $a['id'] ?? null,
                     'code' => $a['code'] ?? '',
@@ -126,6 +140,56 @@ class OpeningBalancesController extends Controller
         return $lines;
     }
 
+    private function buildLinesFromRequestAllowZeros(Request $request): array
+    {
+        $ids   = $request->input('line_account_id', []);
+        $deb   = $request->input('line_debit', []);
+        $cred  = $request->input('line_credit', []);
+        $memos = $request->input('line_memo', []);
+        $bpIds = $request->input('line_bp_id', []);
+
+        $lines = [];
+        $count = max(count($ids), count($deb), count($cred), count($memos), count($bpIds));
+
+        for ($i = 0; $i < $count; $i++) {
+            $accountId = $ids[$i] ?? null;
+            $debit  = (float) ($deb[$i] ?? 0);
+            $credit = (float) ($cred[$i] ?? 0);
+            $memo   = $memos[$i] ?? null;
+            $bpId   = $bpIds[$i] ?? null;
+
+            $accountId = $accountId !== null ? trim((string) $accountId) : '';
+            $bpId = $bpId !== null ? trim((string) $bpId) : '';
+            $memoStr = $memo !== null ? trim((string) $memo) : '';
+
+            $debit = max(0, (float) $debit);
+            $credit = max(0, (float) $credit);
+
+            // Fully empty placeholder row.
+            if ($accountId === '' && $debit <= 0 && $credit <= 0 && $memoStr === '' && $bpId === '') {
+                continue;
+            }
+
+            if ($accountId === '') {
+                throw new \InvalidArgumentException("Line #" . ($i + 1) . ": account is required");
+            }
+
+            if ($debit > 0 && $credit > 0) {
+                throw new \InvalidArgumentException("Line #" . ($i + 1) . ": debit and credit cannot both be > 0");
+            }
+
+            $lines[] = [
+                'account_id' => $accountId,
+                'bp_id' => $bpId !== '' ? $bpId : null,
+                'debit' => round($debit, 2),
+                'credit' => round($credit, 2),
+                'memo' => $memoStr !== '' ? $memoStr : null,
+            ];
+        }
+
+        return $lines;
+    }
+
     public function index(Request $request)
     {
         $year = (string) $request->query('year', now()->format('Y'));
@@ -137,7 +201,7 @@ class OpeningBalancesController extends Controller
         // API opening-balances backend: { status, data: entry|null }
         $opening = null;
         if (($res['success'] ?? false)) {
-            $opening = data_get($res, 'data.data', null);
+            $opening = $this->unwrapJsonData($res);
         }
 
         $accountsById = [];
@@ -147,10 +211,19 @@ class OpeningBalancesController extends Controller
             unset($accErr);
         }
 
+        $accounts = [];
+        $accountsError = null;
+        $role = (string) (auth()->user()?->role ?? 'viewer');
+        if ($opening && in_array($role, ['admin', 'accountant'], true)) {
+            [$accounts, $accountsError] = $this->fetchPostableAccounts();
+        }
+        // dd($opening);
         return view('finance.opening_balances.index', [
             'year' => $year,
             'opening' => $opening,
             'accountsById' => $accountsById,
+            'accounts' => $accounts,
+            'accountsError' => $accountsError,
             'apiError' => ($res['success'] ?? false) ? null : ($res['message'] ?? 'Failed'),
         ]);
     }
@@ -215,5 +288,45 @@ class OpeningBalancesController extends Controller
         return redirect()
             ->route('finance.opening_balances.index', ['year' => $payload['opening_key']])
             ->with('success', 'Opening balance berhasil dibuat & POSTED');
+    }
+
+    public function update(Request $request, string $id)
+    {
+        $year = (string) $request->query('year', now()->format('Y'));
+
+        $request->validate([
+            'date' => 'required|date',
+            'memo' => 'nullable|string|max:2000',
+
+            'line_account_id' => 'required|array',
+            'line_debit' => 'required|array',
+            'line_credit' => 'required|array',
+            'line_memo' => 'nullable|array',
+            'line_bp_id' => 'nullable|array',
+            'line_bp_id.*' => 'nullable|string|max:100',
+        ]);
+
+        try {
+            $lines = $this->buildLinesFromRequestAllowZeros($request);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['api' => $e->getMessage()])->withInput();
+        }
+
+        $payload = [
+            'date' => $request->input('date'),
+            'memo' => $request->input('memo') ?: null,
+            'lines' => $lines,
+        ];
+
+        $res = FinanceApiHelper::put("/v1/opening-balances/{$id}", $payload);
+
+        if (!($res['success'] ?? false)) {
+            // show backend message as-is (balance/line invalid)
+            return back()->withErrors(['api' => (string) ($res['message'] ?? 'Gagal update opening balance')])->withInput();
+        }
+
+        return redirect()
+            ->route('finance.opening_balances.index', ['year' => $year])
+            ->with('success', "Opening balance tahun {$year} berhasil diupdate.");
     }
 }

@@ -235,14 +235,14 @@
                 return merged;
             }
 
-            function renderBpSelectOptions(selectEl, items, placeholder) {
-                const opts = [`<option value="">${escapeHtml(placeholder || '— pilih BP —')}</option>`];
+            function renderBpSelectOptions(selectEl, items) {
+                const opts = [`<option value="">(Tidak perlu BP)</option>`];
                 (items || []).forEach(it => {
-                    const id = String(it.id ?? '');
+                    const id = String(it.id ?? it.value ?? '');
                     if (!id) return;
                     const code = String(it.code ?? '');
-                    const name = String(it.name ?? '');
-                    const label = `${code} — ${name}`.trim();
+                    const name = String(it.name ?? it.label ?? '');
+                    const label = (code || name) ? `${code} — ${name}`.trim() : id;
                     opts.push(`<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`);
                 });
                 selectEl.innerHTML = opts.join('');
@@ -263,7 +263,7 @@
                 if (!accountId) {
                     bpSelect.disabled = true;
                     bpSelect.required = false;
-                    renderBpSelectOptions(bpSelect, [], 'Pilih akun AR/AP dulu');
+                    renderBpSelectOptions(bpSelect, []);
                     bpSelect.value = '';
                     bpHidden.value = '';
                     if (bpHint) bpHint.textContent = '';
@@ -274,7 +274,7 @@
                 if (!categories) {
                     bpSelect.disabled = true;
                     bpSelect.required = false;
-                    renderBpSelectOptions(bpSelect, [], '(Tidak perlu BP)');
+                    renderBpSelectOptions(bpSelect, []);
                     bpSelect.value = '';
                     bpHidden.value = '';
                     if (bpHint) bpHint.textContent = '';
@@ -285,20 +285,24 @@
                 bpSelect.disabled = false;
                 bpSelect.required = true;
 
-                renderBpSelectOptions(bpSelect, [], 'Loading BP...');
+                renderBpSelectOptions(bpSelect, []);
                 const items = await getBpOptionsForCategories(categories);
-                renderBpSelectOptions(bpSelect, items, 'Pilih Business Partner');
+                const current = (bpHidden.value || '').trim();
+                const currentId = current !== '' ? current : null;
+                let finalItems = Array.isArray(items) ? items : [];
+
+                // fallback option if selected BP is not in option list
+                if (currentId && !finalItems.some(it => String(it.id ?? it.value ?? '') === currentId)) {
+                    finalItems = [{ id: currentId, code: '', name: currentId }, ...finalItems];
+                }
+
+                renderBpSelectOptions(bpSelect, finalItems);
 
                 // keep existing selection if possible, else clear
-                const current = (bpHidden.value || '').trim();
-                if (current) {
-                    const exists = items.some(it => String(it.id ?? '') === current);
-                    if (exists) {
-                        bpSelect.value = current;
-                    } else {
-                        bpSelect.value = '';
-                        bpHidden.value = '';
-                    }
+                if (currentId) {
+                    bpSelect.value = currentId;
+                } else {
+                    bpSelect.value = '';
                 }
 
                 if (bpHint) {

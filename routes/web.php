@@ -270,6 +270,9 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
 
             Route::post('/opening-balances', [OpeningBalancesController::class, 'store'])
                 ->name('finance.opening_balances.store');
+
+            Route::put('/opening-balances/{id}', [OpeningBalancesController::class, 'update'])
+                ->name('finance.opening_balances.update');
         });
     });
 
