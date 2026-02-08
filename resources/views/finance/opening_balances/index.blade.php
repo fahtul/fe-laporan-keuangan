@@ -362,7 +362,7 @@
                     }
 
                     bpSelect.disabled = false;
-                    bpSelect.required = true;
+                    bpSelect.required = false;
                     renderBpSelectOptions(bpSelect, []);
 
                     let items = [];
@@ -404,7 +404,9 @@
                     }
 
                     if (bpHint) {
-                        bpHint.textContent = meta?.subledger ? `subledger: ${meta.subledger.toUpperCase()}` : '';
+                        bpHint.textContent = meta?.subledger
+                            ? `BP opsional (subledger: ${meta.subledger.toUpperCase()})`
+                            : 'BP opsional';
                     }
                 }
 
@@ -562,15 +564,7 @@
 
                         const accountId = (tr.querySelector('.line-account')?.value || '').trim();
                         if (isNonZero && accountId) {
-                            const meta = getAccountMetaById(accountId);
-                            const cats = bpCategoriesFor(meta);
-                            if (cats) {
-                                const bpId = (tr.querySelector('[name="line_bp_id[]"]')?.value || '').trim();
-                                if (!bpId) {
-                                    const suffix = meta?.subledger ? ` (${meta.subledger.toUpperCase()})` : '';
-                                    errors.push(`Baris #${idx + 1}: akun ${meta?.label || accountId}${suffix} wajib pilih Business Partner`);
-                                }
-                            }
+                            // BP optional: do not block submit when bp_id empty
                         }
                     });
 

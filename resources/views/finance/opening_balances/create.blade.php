@@ -281,9 +281,9 @@
                     return;
                 }
 
-                // required / enabled
+                // enabled (BP optional)
                 bpSelect.disabled = false;
-                bpSelect.required = true;
+                bpSelect.required = false;
 
                 renderBpSelectOptions(bpSelect, []);
                 const items = await getBpOptionsForCategories(categories);
@@ -307,9 +307,9 @@
 
                 if (bpHint) {
                     const hint =
-                        meta.subledger === 'ar' ? 'AR: customer/insurer' :
-                        meta.subledger === 'ap' ? 'AP: supplier' :
-                        'Wajib BP';
+                        meta.subledger === 'ar' ? 'BP opsional (AR: customer/insurer)' :
+                        meta.subledger === 'ap' ? 'BP opsional (AP: supplier)' :
+                        'BP opsional';
                     bpHint.textContent = hint;
                 }
             }
@@ -448,22 +448,6 @@
                 const rows = Array.from(linesBody.querySelectorAll('tr'));
                 const errors = [];
                 let firstErrorEl = null;
-
-                rows.forEach((tr, idx) => {
-                    const meta = getAccountMeta(tr);
-                    const categories = getBpCategoriesForAccount(meta);
-                    if (!categories) return;
-
-                    const bpId = (tr.querySelector('[name="line_bp_id[]"]')?.value || '').trim();
-                    if (bpId) return;
-
-                    const suffix = meta.subledger ? ` (${meta.subledger.toUpperCase()})` : '';
-                    errors.push(`Baris #${idx + 1}: akun ${meta.label}${suffix} wajib pilih Business Partner`);
-
-                    if (!firstErrorEl) {
-                        firstErrorEl = tr.querySelector('.line-bp-select') || tr.querySelector('.line-account');
-                    }
-                });
 
                 if (errors.length) {
                     e.preventDefault();
