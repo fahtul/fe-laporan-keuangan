@@ -49,6 +49,56 @@
                 <p class="text-xs text-gray-500 mt-1">Dipakai oleh report Arus Kas (Cash Flow).</p>
             </div>
 
+            {{-- PARENT ACCOUNT --}}
+            <div>
+                <label class="block text-sm mb-1">Parent Account (optional)</label>
+                @php
+                    $parentIdOld = (string) old('parent_id', (string) (data_get($account, 'parent_id') ?? ''));
+                    $selfId = (string) data_get($account, 'id', '');
+
+                    $parentsFiltered = collect($parents ?? [])
+                        ->filter(function ($p) use ($type, $selfId) {
+                            if (!is_array($p)) {
+                                return false;
+                            }
+                            $pid = (string) data_get($p, 'id', '');
+                            if ($pid === '' || $pid === $selfId) {
+                                return false;
+                            }
+                            return (string) data_get($p, 'type', '') === $type;
+                        })
+                        ->values();
+
+                    $parentExists = $parentIdOld !== '' && $parentsFiltered->contains(function ($p) use ($parentIdOld) {
+                        return (string) data_get($p, 'id', '') === $parentIdOld;
+                    });
+                @endphp
+
+                <select name="parent_id" class="border rounded p-2 w-full">
+                    <option value="" {{ $parentIdOld === '' ? 'selected' : '' }}>— No Parent —</option>
+
+                    @if ($parentIdOld !== '' && !$parentExists)
+                        <option value="{{ $parentIdOld }}" selected>Parent saat ini: {{ $parentIdOld }}</option>
+                    @endif
+
+                    @foreach ($parentsFiltered as $p)
+                        @php
+                            $pid = (string) data_get($p, 'id', '');
+                            $label = trim((string) data_get($p, 'code', '') . ' — ' . (string) data_get($p, 'name', ''));
+                            $isPostable = (bool) data_get($p, 'is_postable', true);
+                            $suffix = $isPostable ? '' : ' (header)';
+                        @endphp
+                        <option value="{{ $pid }}" {{ $parentIdOld === $pid ? 'selected' : '' }}>
+                            {{ $label }}{{ $suffix }}
+                        </option>
+                    @endforeach
+                </select>
+
+                <p class="text-xs text-gray-500 mt-1">
+                    Pilih akun parent (biasanya akun header/grup). Untuk melepas parent, pilih “No Parent”.
+                </p>
+            </div>
+
             <div>
                 <label class="block text-sm mb-1">Type</label>
                 <input readonly class="border rounded w-full px-3 py-2 bg-gray-100 cursor-not-allowed"

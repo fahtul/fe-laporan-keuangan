@@ -34,17 +34,23 @@ class AccountsController extends Controller
     private function fetchParents()
     {
         // ambil banyak untuk dropdown parent
-        $res = FinanceApiHelper::get('/v1/accounts', [
-            'page' => 1,
-            'limit' => 100,
+        $res = FinanceApiHelper::get('/v1/accounts/options', [
+            'q' => '',
+            'limit' => 2000,
+            'include_inactive' => 'false',
         ]);
 
         if (!($res['success'] ?? false)) {
             return [[], $res['message'] ?? 'Failed load parents'];
         }
 
-        $payload = $this->unwrapData($res['data'] ?? null) ?? [];
-        $items = data_get($payload, 'data', $payload);
+        $json = $res['data'] ?? null;
+        $payload = data_get($json, 'data.data') ?? data_get($json, 'data') ?? [];
+
+        $items = $payload;
+        if (is_array($payload) && array_key_exists('data', $payload)) {
+            $items = $payload['data'] ?? [];
+        }
         $items = is_array($items) ? $items : [];
 
         $parents = collect($items)
@@ -212,8 +218,6 @@ class AccountsController extends Controller
         // jangan boleh pilih dirinya sendiri sebagai parent
         $parents = collect($parents)->reject(fn($p) => $p['id'] === $id)->values()->all();
 
-        // dd($account, $parents);
-
         return view('finance.accounts.edit', compact('account', 'parents', 'parentsError'));
     }
 
@@ -221,6 +225,7 @@ class AccountsController extends Controller
     {
         $payload = $request->validate([
             'name' => 'required|string|max:200',
+            'parent_id' => 'nullable|string|max:50',
             'is_postable' => 'required|in:0,1',
             'is_active' => 'required|in:0,1',
             'requires_bp' => 'required|in:0,1',
@@ -228,11 +233,13 @@ class AccountsController extends Controller
             'cf_activity' => 'nullable|in:cash,operating,investing,financing',
         ]);
 
+        $payload['parent_id'] = ($payload['parent_id'] ?? null) ?: null;
         $payload['subledger'] = ($payload['subledger'] ?? null) ?: null;
         $payload['cf_activity'] = ($payload['cf_activity'] ?? null) ?: null;
 
         $payload = [
             'name' => (string) $payload['name'],
+            'parent_id' => $payload['parent_id'],
             'is_postable' => ((string) $payload['is_postable'] === '1'),
             'is_active' => ((string) $payload['is_active'] === '1'),
             'requires_bp' => ((string) $payload['requires_bp'] === '1'),

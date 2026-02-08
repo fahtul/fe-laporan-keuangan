@@ -34,6 +34,10 @@
                         </x-slot>
 
                         <x-slot name="content">
+                            <x-dropdown-link :href="route('finance.financial_dashboard.index')">
+                                Dashboard Keuangan
+                            </x-dropdown-link>
+                            <div class="border-t border-gray-100 my-1"></div>
                             <x-dropdown-link :href="route('finance.trial_balance.index')">
                                 Neraca Saldo
                             </x-dropdown-link>
@@ -138,16 +142,19 @@
     </div>
 
     <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
+        <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+            <div class="pt-2 pb-3 space-y-1">
+                <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    {{ __('Dashboard') }}
+                </x-responsive-nav-link>
 
-            <div class="px-4 pt-2 text-xs font-semibold text-gray-500">FINANCE</div>
-            <x-responsive-nav-link :href="route('finance.trial_balance.index')" :active="request()->routeIs('finance.trial_balance.*')">
-                Neraca Saldo
-            </x-responsive-nav-link>
+                <div class="px-4 pt-2 text-xs font-semibold text-gray-500">FINANCE</div>
+                <x-responsive-nav-link :href="route('finance.financial_dashboard.index')" :active="request()->routeIs('finance.financial_dashboard.*')">
+                    Dashboard Keuangan
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('finance.trial_balance.index')" :active="request()->routeIs('finance.trial_balance.*')">
+                    Neraca Saldo
+                </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('finance.worksheet.index')" :active="request()->routeIs('finance.worksheet.*')">
                 Neraca Lajur
             </x-responsive-nav-link>

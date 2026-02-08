@@ -18,6 +18,7 @@ use App\Http\Controllers\Finance\SubledgersController;
 use App\Http\Controllers\Finance\WorksheetController;
 use App\Http\Controllers\Finance\ClosingsController;
 use App\Http\Controllers\Finance\AccountsImportController;
+use App\Http\Controllers\Finance\FinancialDashboardController;
 use App\Http\Controllers\Finance\ReportExportsController;
 use App\Http\Controllers\ProfileController;
 use App\Services\Finance\FinanceApiClient;
@@ -162,6 +163,13 @@ Route::prefix('admin')
         Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
         Route::patch('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset');
+    });
+
+Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
+    ->prefix('finance')
+    ->group(function () {
+        Route::get('/financial-dashboard', [FinancialDashboardController::class, 'index'])
+            ->name('finance.financial_dashboard.index');
     });
 
 Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])

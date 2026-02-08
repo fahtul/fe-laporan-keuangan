@@ -39,6 +39,9 @@
     };
 
     $menus = [
+        // Dashboard
+        ['key' => 'financial_dashboard', 'title' => 'Dashboard Keuangan', 'desc' => 'Charts ringkas keuangan.', 'route' => 'finance.financial_dashboard.index', 'params' => ['from_date' => $year . '-01-01', 'to_date' => $year . '-12-31', 'interval' => 'month'], 'section' => 'Laporan', 'icon' => 'report', 'keywords' => 'dashboard keuangan chart financials'],
+
         // Laporan
         ['key' => 'trial_balance', 'title' => 'Neraca Saldo', 'desc' => 'Trial balance per periode.', 'route' => 'finance.trial_balance.index', 'params' => ['year' => $year], 'section' => 'Laporan', 'icon' => 'report', 'keywords' => 'neraca saldo trial balance'],
         ['key' => 'balance_sheet', 'title' => 'Neraca', 'desc' => 'Balance sheet / posisi keuangan.', 'route' => 'finance.balance_sheet.index', 'params' => ['year' => $year], 'section' => 'Laporan', 'icon' => 'report', 'keywords' => 'neraca balance sheet'],
@@ -451,4 +454,3 @@
         });
     </script>
 </x-app-layout>
-
