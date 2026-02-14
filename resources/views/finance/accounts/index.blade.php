@@ -28,6 +28,7 @@
                         <th class="text-left p-3">Code</th>
                         <th class="text-left p-3">Name</th>
                         <th class="text-left p-3">Type</th>
+                        <th class="text-left p-3">P&L Category</th>
                         <th class="text-left p-3">Parent</th>
                         <th class="text-left p-3">Postable</th>
                         <th class="text-right p-3">Action</th>
@@ -40,6 +41,26 @@
                             <td class="p-3">{{ $a['code'] ?? '' }}</td>
                             <td class="p-3">{{ $a['name'] ?? '' }}</td>
                             <td class="p-3">{{ $a['type'] ?? '' }}</td>
+
+                            <td class="p-3">
+                                @php
+                                    $pl = (string) ($a['pl_category'] ?? '');
+                                    $plLabel = match ($pl) {
+                                        'depreciation_amortization' => 'Depreciation & Amortization',
+                                        'revenue' => 'Revenue',
+                                        'cogs' => 'COGS/HPP',
+                                        'opex' => 'Operating Expense',
+                                        'non_operating' => 'Non Operating',
+                                        'other' => 'Other',
+                                        default => '-',
+                                    };
+                                @endphp
+                                @if ($pl === '')
+                                    <span class="text-gray-400">-</span>
+                                @else
+                                    <span class="px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-xs border border-indigo-200">{{ $plLabel }}</span>
+                                @endif
+                            </td>
 
                             <td class="p-3">
                                 @php $pid = $a['parent_id'] ?? null; @endphp
@@ -72,7 +93,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="p-4 text-gray-500" colspan="6">No data</td>
+                            <td class="p-4 text-gray-500" colspan="7">No data</td>
                         </tr>
                     @endforelse
                 </tbody>

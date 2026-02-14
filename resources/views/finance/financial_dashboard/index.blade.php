@@ -1,7 +1,7 @@
 @extends('finance.report-layout')
 
 @section('title', 'Dashboard Keuangan')
-@section('subtitle', 'Ringkasan chart (Income Statement, Neraca, Ekuitas, Arus Kas)')
+@section('subtitle', 'Ringkasan chart (Laba Rugi, Neraca, Ekuitas, Arus Kas)')
 
 @section('header_actions')
     <a class="px-4 py-2 rounded border bg-white text-gray-900 hover:bg-gray-50"
@@ -64,9 +64,15 @@
             {{ $apiError }}
         </div>
     @endif
+    @if (!empty($incomeApiError))
+        <div class="p-3 rounded bg-yellow-100 text-yellow-800 border mt-2">
+            Grafik Laba Rugi: {{ $incomeApiError }}
+        </div>
+    @endif
 
     @php
         $p = is_array($payload ?? null) ? $payload : [];
+        $incomeP = is_array($incomePayload ?? null) ? $incomePayload : [];
     @endphp
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -74,9 +80,29 @@
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <div class="font-semibold text-gray-900">Laba Rugi</div>
-                    <div class="text-sm text-gray-600">Pendapatan vs Beban vs Laba Bersih</div>
+                    <div class="text-sm text-gray-600">Total Pendapatan, HPP, Biaya Operasional, EBITDA</div>
                 </div>
             </div>
+
+            <div class="grid grid-cols-2 xl:grid-cols-4 gap-2 mt-3">
+                <div class="border rounded p-2 bg-gray-50">
+                    <div class="text-[11px] text-gray-500">Total Pendapatan</div>
+                    <div id="kpiIncomeRevenue" class="text-sm font-semibold text-green-700">Rp 0</div>
+                </div>
+                <div class="border rounded p-2 bg-gray-50">
+                    <div class="text-[11px] text-gray-500">Total HPP</div>
+                    <div id="kpiIncomeCogs" class="text-sm font-semibold text-amber-700">Rp 0</div>
+                </div>
+                <div class="border rounded p-2 bg-gray-50">
+                    <div class="text-[11px] text-gray-500">Total Biaya Operasional</div>
+                    <div id="kpiIncomeOpex" class="text-sm font-semibold text-red-700">Rp 0</div>
+                </div>
+                <div class="border rounded p-2 bg-gray-50">
+                    <div class="text-[11px] text-gray-500">EBITDA</div>
+                    <div id="kpiIncomeEbitda" class="text-sm font-semibold text-blue-900">Rp 0</div>
+                </div>
+            </div>
+
             <div class="mt-4">
                 <canvas id="chartIncome"></canvas>
                 <div id="emptyIncome" class="hidden p-4 text-sm text-gray-600 bg-gray-50 border rounded mt-3">No data</div>
@@ -117,6 +143,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const payload = @json($p);
+            const incomePayload = @json($incomeP);
             const chartType = @json($chartType);
             const charts = {};
 
@@ -124,6 +151,15 @@
                 if (!Array.isArray(arr)) return [];
                 return arr.map(v => {
                     const n = Number(v);
+                    return Number.isFinite(n) ? n : 0;
+                });
+            }
+
+            function normalizeSeries(labels, arr) {
+                const safeLabels = Array.isArray(labels) ? labels : [];
+                const source = Array.isArray(arr) ? arr : [];
+                return safeLabels.map((_, i) => {
+                    const n = Number(source[i] ?? 0);
                     return Number.isFinite(n) ? n : 0;
                 });
             }
@@ -261,28 +297,51 @@
                 return charts[canvasId];
             }
 
-            const income = payload.income_statement || {};
+            const income = incomePayload || {};
+            const incomeLabels = Array.isArray(income.labels) ? income.labels : [];
+            const incomeRevenue = normalizeSeries(incomeLabels, income.series?.chart_revenue);
+            const incomeCogs = normalizeSeries(incomeLabels, income.series?.chart_cogs);
+            const incomeOpex = normalizeSeries(incomeLabels, income.series?.chart_operating_expense);
+            const incomeEbitdaRaw = income.series?.chart_ebitda ?? income.series?.ebitda ?? income.series?.operating_profit ?? [];
+            const incomeEbitda = normalizeSeries(incomeLabels, incomeEbitdaRaw);
+
+            const kpiIncomeRevenue = document.getElementById('kpiIncomeRevenue');
+            const kpiIncomeCogs = document.getElementById('kpiIncomeCogs');
+            const kpiIncomeOpex = document.getElementById('kpiIncomeOpex');
+            const kpiIncomeEbitda = document.getElementById('kpiIncomeEbitda');
+            if (kpiIncomeRevenue) kpiIncomeRevenue.textContent = fmtMoney(getLastValue(incomeRevenue));
+            if (kpiIncomeCogs) kpiIncomeCogs.textContent = fmtMoney(getLastValue(incomeCogs));
+            if (kpiIncomeOpex) kpiIncomeOpex.textContent = fmtMoney(getLastValue(incomeOpex));
+            if (kpiIncomeEbitda) kpiIncomeEbitda.textContent = fmtMoney(getLastValue(incomeEbitda));
+
             buildChart('chartIncome', 'emptyIncome',
-                income.labels || [], [
+                incomeLabels, [
                     {
-                        label: 'Total Revenue',
-                        data: toNumberArray(income.series?.total_revenue),
+                        label: 'Pendapatan',
+                        data: incomeRevenue,
                         borderColor: '#16a34a',
                         backgroundColor: 'rgba(22,163,74,.15)',
                         tension: 0.25
                     },
                     {
-                        label: 'Total Operating Expense',
-                        data: toNumberArray(income.series?.total_operating_expense),
+                        label: 'HPP',
+                        data: incomeCogs,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245,158,11,.15)',
+                        tension: 0.25
+                    },
+                    {
+                        label: 'Biaya Operasional',
+                        data: incomeOpex,
                         borderColor: '#ef4444',
                         backgroundColor: 'rgba(239,68,68,.12)',
                         tension: 0.25
                     },
                     {
-                        label: 'Net Profit After Tax',
-                        data: toNumberArray(income.series?.net_profit_after_tax),
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37,99,235,.12)',
+                        label: 'EBITDA',
+                        data: incomeEbitda,
+                        borderColor: '#1e3a8a',
+                        backgroundColor: 'rgba(30,58,138,.12)',
                         tension: 0.25
                     }
                 ]);

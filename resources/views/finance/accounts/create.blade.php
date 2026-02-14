@@ -59,7 +59,20 @@
                 </select>
                 <p class="text-xs text-gray-500 mt-1">Dipakai oleh report Arus Kas (Cash Flow).</p>
             </div>
-
+            <div>
+                <label class="block text-sm mb-1">P&L Category (optional)</label>
+                @php $plOld = (string) old('pl_category', ''); @endphp
+                <select name="pl_category" class="border rounded p-2 w-full">
+                    <option value="" {{ $plOld === '' ? 'selected' : '' }}>-- None --</option>
+                    <option value="revenue" {{ $plOld === 'revenue' ? 'selected' : '' }}>Revenue</option>
+                    <option value="cogs" {{ $plOld === 'cogs' ? 'selected' : '' }}>COGS/HPP</option>
+                    <option value="opex" {{ $plOld === 'opex' ? 'selected' : '' }}>Operating Expense</option>
+                    <option value="depreciation_amortization" {{ $plOld === 'depreciation_amortization' ? 'selected' : '' }}>Depreciation & Amortization</option>
+                    <option value="non_operating" {{ $plOld === 'non_operating' ? 'selected' : '' }}>Non Operating</option>
+                    <option value="other" {{ $plOld === 'other' ? 'selected' : '' }}>Other</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Dipakai untuk klasifikasi akun P&L, termasuk komponen EBITDA.</p>
+            </div>
             {{-- TYPE + NORMAL BALANCE (auto via JS) --}}
             <div>
                 <label class="block text-sm mb-1">Type</label>

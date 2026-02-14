@@ -121,7 +121,10 @@
 
             <div class="mt-3 p-3 rounded border bg-gray-50 text-xs">
                 <div class="font-semibold mb-1">CSV Header</div>
-                <div class="font-mono">code,name,type,parent_code,is_postable,cash_flow_category,requires_bp,subledger</div>
+                <div class="font-mono">code,name,type,parent_code,is_postable,cash_flow_category,requires_bp,subledger,pl_category</div>
+                <div class="mt-2 text-gray-600">
+                    Nilai valid pl_category: revenue, cogs, opex, depreciation_amortization, non_operating, other
+                </div>
             </div>
 
             <form method="POST" action="{{ route('finance.accounts.import.store') }}" class="mt-3 space-y-3"
@@ -169,7 +172,7 @@
                 <div>
                     <label class="block text-sm mb-1">JSON</label>
                     <textarea name="json_text" rows="10" class="border rounded px-3 py-2 w-full font-mono text-xs"
-                        placeholder='[{"code":"1101","name":"Kas","type":"asset","parent_code":null,"is_postable":true,"cash_flow_category":"cash","requires_bp":false,"subledger":null}]'>{{ old('json_text') }}</textarea>
+                        placeholder='[{"code":"5101","name":"Beban Operasional","type":"expense","parent_code":null,"is_postable":true,"cash_flow_category":"operating","requires_bp":false,"subledger":null,"pl_category":"opex"}]'>{{ old('json_text') }}</textarea>
                 </div>
 
                 <button class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">
@@ -179,4 +182,3 @@
         </div>
     </div>
 @endsection
-

@@ -8,6 +8,15 @@ use Illuminate\Http\Request;
 
 class AccountsImportController extends Controller
 {
+    private const PL_CATEGORIES = [
+        'revenue',
+        'cogs',
+        'opex',
+        'depreciation_amortization',
+        'non_operating',
+        'other',
+    ];
+
     public function index()
     {
         return view('finance.accounts.import');
@@ -62,14 +71,16 @@ class AccountsImportController extends Controller
     public function downloadHospitalTemplate()
     {
         $csv = implode("\n", [
-            'code,name,type,parent_code,is_postable,cash_flow_category,requires_bp,subledger',
-            '1101,Kas,asset,,1,cash,0,',
-            '1120,Bank,asset,,1,cash,0,',
-            '2101,Hutang Usaha,liability,,1,,1,ap',
-            '1200,Piutang Usaha,asset,,1,,1,ar',
-            '3101,Modal,equity,,1,,0,',
-            '4101,Pendapatan Jasa,revenue,,1,,0,',
-            '5101,Beban Operasional,expense,,1,,0,',
+            'code,name,type,parent_code,is_postable,cash_flow_category,requires_bp,subledger,pl_category',
+            '1101,Kas,asset,,1,cash,0,,',
+            '1120,Bank,asset,,1,cash,0,,',
+            '2101,Hutang Usaha,liability,,1,,1,ap,',
+            '1200,Piutang Usaha,asset,,1,,1,ar,',
+            '3101,Modal,equity,,1,,0,,',
+            '4101,Pendapatan Jasa,revenue,,1,,0,,revenue',
+            '5101,HPP Obat,expense,,1,,0,,cogs',
+            '5201,Beban Operasional,expense,,1,,0,,opex',
+            '5301,Beban Penyusutan,expense,,1,,0,,depreciation_amortization',
         ]) . "\n";
 
         return response()->streamDownload(function () use ($csv) {
@@ -157,9 +168,14 @@ class AccountsImportController extends Controller
             $code = trim((string) data_get($row, 'code', ''));
             $name = trim((string) data_get($row, 'name', ''));
             $type = trim((string) data_get($row, 'type', ''));
+            $plCategoryRaw = data_get($row, 'pl_category');
+            $plCategory = $this->normalizePlCategory($plCategoryRaw);
 
             if ($code === '' || $name === '' || $type === '') {
                 return [[], 'Row JSON index ' . $idx . ' wajib punya code, name, type.'];
+            }
+            if ($plCategoryRaw !== null && trim((string) $plCategoryRaw) !== '' && $plCategory === null) {
+                return [[], 'Row JSON index ' . $idx . ' punya pl_category tidak valid. Gunakan: ' . implode(',', self::PL_CATEGORIES)];
             }
 
             $normalized[] = [
@@ -171,6 +187,7 @@ class AccountsImportController extends Controller
                 'cash_flow_category' => $this->emptyToNull((string) data_get($row, 'cash_flow_category', '')),
                 'requires_bp' => $this->normalizeBool(data_get($row, 'requires_bp', false), false),
                 'subledger' => $this->emptyToNull((string) data_get($row, 'subledger', '')),
+                'pl_category' => $plCategory,
             ];
         }
 
@@ -250,6 +267,16 @@ class AccountsImportController extends Controller
             $cashFlowCategory = isset($index['cash_flow_category']) ? (string) ($rowValues[$index['cash_flow_category']] ?? '') : '';
             $requiresBpRaw = isset($index['requires_bp']) ? ($rowValues[$index['requires_bp']] ?? '0') : '0';
             $subledger = isset($index['subledger']) ? (string) ($rowValues[$index['subledger']] ?? '') : '';
+            $plCategoryRaw = isset($index['pl_category']) ? (string) ($rowValues[$index['pl_category']] ?? '') : '';
+
+            $plCategory = $this->normalizePlCategory($plCategoryRaw);
+            if (!is_null($plCategoryRaw) && trim($plCategoryRaw) !== '' && $plCategory === null) {
+                $errors[] = [
+                    'line' => $lineNo,
+                    'message' => 'pl_category tidak valid. Gunakan: ' . implode(',', self::PL_CATEGORIES),
+                ];
+                continue;
+            }
 
             $accounts[] = [
                 'code' => $code,
@@ -260,6 +287,7 @@ class AccountsImportController extends Controller
                 'cash_flow_category' => $this->emptyToNull($cashFlowCategory),
                 'requires_bp' => $this->normalizeBool($requiresBpRaw, false),
                 'subledger' => $this->emptyToNull($subledger),
+                'pl_category' => $plCategory,
             ];
         }
 
@@ -306,5 +334,19 @@ class AccountsImportController extends Controller
         }
 
         return $default;
+    }
+
+    private function normalizePlCategory($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $v = strtolower(trim((string) $value));
+        if ($v === '') {
+            return null;
+        }
+
+        return in_array($v, self::PL_CATEGORIES, true) ? $v : null;
     }
 }

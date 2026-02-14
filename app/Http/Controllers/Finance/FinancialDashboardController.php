@@ -34,7 +34,7 @@ class FinancialDashboardController extends Controller
         if (!$this->isDateYmd($fromDate)) $fromDate = $defaultFrom;
         if (!$this->isDateYmd($toDate)) $toDate = $defaultTo;
 
-        $allowedIntervals = ['month', 'quarter', 'year'];
+        $allowedIntervals = ['month', 'quarter'];
         if (!in_array($interval, $allowedIntervals, true)) $interval = 'month';
 
         $allowedChartTypes = ['line', 'bar', 'stacked_bar', 'doughnut'];
@@ -46,8 +46,21 @@ class FinancialDashboardController extends Controller
             'interval' => $interval,
         ]);
 
+        $incomeRes = FinanceApiHelper::get('/v1/charts/income-statement', [
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'interval' => $interval ?: 'month',
+            'grouping' => 'excel',
+            'include_zero' => '0',
+            'include_header' => '0',
+            // tax_rate optional (kirim hanya kalau user isi)
+            ...($request->filled('tax_rate') ? ['tax_rate' => (string) $request->query('tax_rate')] : []),
+        ]);
+
         $apiError = null;
+        $incomeApiError = null;
         $payload = null;
+        $incomePayload = null;
         $period = [
             'from_date' => $fromDate,
             'to_date' => $toDate,
@@ -62,6 +75,13 @@ class FinancialDashboardController extends Controller
             $period = is_array($payload) ? (data_get($payload, 'period', $period) ?: $period) : $period;
         }
 
+        if (!($incomeRes['success'] ?? false)) {
+            $incomeApiError = (string) ($incomeRes['message'] ?? 'Failed to load income statement chart');
+        } else {
+            $incomePayload = $this->unwrapJsonData($incomeRes);
+            $incomePayload = is_array($incomePayload) ? $incomePayload : null;
+        }
+
         return view('finance.financial_dashboard.index', [
             'fromDate' => $fromDate,
             'toDate' => $toDate,
@@ -69,7 +89,9 @@ class FinancialDashboardController extends Controller
             'chartType' => $chartType,
             'period' => $period,
             'payload' => $payload,
+            'incomePayload' => $incomePayload,
             'apiError' => $apiError,
+            'incomeApiError' => $incomeApiError,
             'allowedIntervals' => $allowedIntervals,
             'allowedChartTypes' => $allowedChartTypes,
         ]);

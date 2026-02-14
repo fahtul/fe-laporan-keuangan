@@ -155,12 +155,14 @@ class AccountsController extends Controller
             'requires_bp' => 'required|in:0,1',
             'subledger' => 'nullable|string|max:50',
             'cf_activity' => 'nullable|in:cash,operating,investing,financing',
+            'pl_category' => 'nullable|in:revenue,cogs,opex,depreciation_amortization,non_operating,other',
         ]);
 
         // rapikan empty string -> null
         $payload['parent_id'] = ($payload['parent_id'] ?? null) ?: null;
         $payload['subledger'] = ($payload['subledger'] ?? null) ?: null;
         $payload['cf_activity'] = ($payload['cf_activity'] ?? null) ?: null;
+        $payload['pl_category'] = ($payload['pl_category'] ?? null) ?: null;
 
         $payload = [
             'code' => (string) $payload['code'],
@@ -172,6 +174,7 @@ class AccountsController extends Controller
             'requires_bp' => ((string) $payload['requires_bp'] === '1'),
             'subledger' => $payload['subledger'],
             'cf_activity' => $payload['cf_activity'],
+            'pl_category' => $payload['pl_category'],
         ];
 
         $res = FinanceApiHelper::post('/v1/accounts', $payload);
@@ -231,11 +234,13 @@ class AccountsController extends Controller
             'requires_bp' => 'required|in:0,1',
             'subledger' => 'nullable|string|max:50',
             'cf_activity' => 'nullable|in:cash,operating,investing,financing',
+            'pl_category' => 'nullable|in:revenue,cogs,opex,depreciation_amortization,non_operating,other',
         ]);
 
         $payload['parent_id'] = ($payload['parent_id'] ?? null) ?: null;
         $payload['subledger'] = ($payload['subledger'] ?? null) ?: null;
         $payload['cf_activity'] = ($payload['cf_activity'] ?? null) ?: null;
+        $payload['pl_category'] = ($payload['pl_category'] ?? null) ?: null;
 
         $payload = [
             'name' => (string) $payload['name'],
@@ -245,6 +250,7 @@ class AccountsController extends Controller
             'requires_bp' => ((string) $payload['requires_bp'] === '1'),
             'subledger' => $payload['subledger'],
             'cf_activity' => $payload['cf_activity'],
+            'pl_category' => $payload['pl_category'],
         ];
 
         $res = FinanceApiHelper::put("/v1/accounts/{$id}", $payload);
