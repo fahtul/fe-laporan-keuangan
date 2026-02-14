@@ -235,11 +235,17 @@ Route::middleware(['auth', 'finance.access:admin,accountant,viewer'])
             Route::put('/journal-entries/{id}', [JournalEntriesController::class, 'update'])
                 ->name('finance.journal_entries.update');
 
+            Route::delete('/journal-entries/{id}', [JournalEntriesController::class, 'destroy'])
+                ->name('finance.journal_entries.destroy');
+
             Route::post('/journal-entries/{id}/post', [JournalEntriesController::class, 'post'])
                 ->name('finance.journal_entries.post');
 
             Route::post('/journal-entries/{id}/reverse', [JournalEntriesController::class, 'reverse'])
                 ->name('finance.journal_entries.reverse');
+
+            Route::post('/journal-entries/{id}/amend', [JournalEntriesController::class, 'amend'])
+                ->name('finance.journal_entries.amend');
 
 	            // Business Partners (WRITE)
 	            Route::get('/business-partners/import', [BusinessPartnersImportController::class, 'index'])

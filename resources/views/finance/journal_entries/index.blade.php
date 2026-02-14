@@ -1,4 +1,5 @@
 @extends('finance.layout')
+@php use Illuminate\Support\Str; @endphp
 
 @section('title', 'Journal Entries')
 @section('subtitle', 'Draft / Posted / Void')
@@ -86,6 +87,9 @@
 
                             $canWrite = in_array(auth()->user()->role, ['admin', 'accountant']);
                             $isDraft = $st === 'draft';
+                            $isPosted = $st === 'posted';
+                            $isVoid = $st === 'void';
+                            $allowReverse = $isPosted && !in_array($entryType, ['opening', 'closing'], true);
                         @endphp
 
                         <tr class="border-t">
@@ -117,14 +121,43 @@
                                 </span>
                             </td>
 
-                            <td class="p-3 text-right">
-                                <a class="underline" href="{{ route('finance.journal_entries.edit', $e['id']) }}">View</a>
+                            <td class="p-3 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <a class="px-2 py-1 rounded border text-xs hover:bg-gray-50"
+                                        href="{{ route('finance.journal_entries.edit', $e['id']) }}">View</a>
 
-                                @if ($canWrite && $isDraft)
-                                    <span class="text-gray-300 mx-2">|</span>
-                                    <a class="underline"
-                                        href="{{ route('finance.journal_entries.edit', $e['id']) }}">Edit</a>
-                                @endif
+                                    @if ($canWrite && $isDraft)
+                                        <a class="px-2 py-1 rounded border text-xs hover:bg-gray-50"
+                                            href="{{ route('finance.journal_entries.edit', $e['id']) }}">Edit</a>
+
+                                        <form method="POST" action="{{ route('finance.journal_entries.post', $e['id']) }}"
+                                            class="inline-flex"
+                                            onsubmit="return confirm('Post entry ini? Setelah posted tidak bisa diedit/hapus langsung.');">
+                                            @csrf
+                                            <input type="hidden" name="idempotency_key" value="{{ (string) Str::uuid() }}">
+                                            <button type="submit"
+                                                class="px-2 py-1 rounded border border-green-200 text-green-700 text-xs hover:bg-green-50">Post</button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('finance.journal_entries.destroy', $e['id']) }}"
+                                            class="inline-flex" onsubmit="return confirm('Hapus draft jurnal ini?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="px-2 py-1 rounded border border-red-200 text-red-700 text-xs hover:bg-red-50">Delete</button>
+                                        </form>
+                                    @elseif($canWrite && $isPosted)
+                                        <a class="px-2 py-1 rounded border border-indigo-200 text-indigo-700 text-xs hover:bg-indigo-50"
+                                            href="{{ route('finance.journal_entries.edit', $e['id']) }}#amendSection">Amend</a>
+
+                                        @if ($allowReverse)
+                                            <a class="px-2 py-1 rounded border text-xs hover:bg-gray-50"
+                                                href="{{ route('finance.journal_entries.edit', $e['id']) }}#reverseSection">Reverse</a>
+                                        @endif
+                                    @elseif($isVoid)
+                                        <span class="px-2 py-1 rounded border text-xs text-gray-400 bg-gray-50">Disabled</span>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty

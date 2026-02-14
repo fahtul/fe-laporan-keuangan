@@ -35,13 +35,45 @@ class JournalEntriesController extends Controller
         return [$items, null];
     }
 
-    private function buildLinesFromRequest(Request $request): array
+    private function validateBpRequirements(array $lines): void
     {
-        $ids   = $request->input('line_account_id', []);
-        $deb   = $request->input('line_debit', []);
-        $cred  = $request->input('line_credit', []);
-        $memos = $request->input('line_memo', []);
-        $bpIds = $request->input('line_bp_id', []);
+        [$accounts] = $this->fetchAccountOptions();
+        $accountMap = collect($accounts)->mapWithKeys(function ($a) {
+            $id = (string) data_get($a, 'id', '');
+            if ($id === '') {
+                return [];
+            }
+            return [
+                $id => [
+                    'requires_bp' => (bool) data_get($a, 'requires_bp', false),
+                    'subledger' => strtolower((string) data_get($a, 'subledger', '')),
+                ],
+            ];
+        })->all();
+
+        foreach ($lines as $idx => $line) {
+            $accountId = (string) ($line['account_id'] ?? '');
+            if ($accountId === '' || !isset($accountMap[$accountId])) {
+                continue;
+            }
+
+            $meta = $accountMap[$accountId];
+            $needsBp = in_array($meta['subledger'], ['ar', 'ap'], true) || $meta['requires_bp'] === true;
+            $bpId = trim((string) ($line['bp_id'] ?? ''));
+
+            if ($needsBp && $bpId === '') {
+                throw new \InvalidArgumentException('Baris #' . ($idx + 1) . ': akun AR/AP atau requires_bp wajib pilih BP');
+            }
+        }
+    }
+
+    private function buildLinesFromRequest(Request $request, string $prefix = 'line_'): array
+    {
+        $ids   = $request->input($prefix . 'account_id', []);
+        $deb   = $request->input($prefix . 'debit', []);
+        $cred  = $request->input($prefix . 'credit', []);
+        $memos = $request->input($prefix . 'memo', []);
+        $bpIds = $request->input($prefix . 'bp_id', []);
 
         $lines = [];
 
@@ -89,6 +121,8 @@ class JournalEntriesController extends Controller
         if (count($lines) < 2) {
             throw new \InvalidArgumentException("Journal entry must have at least 2 lines");
         }
+
+        $this->validateBpRequirements($lines);
 
         return $lines;
     }
@@ -299,6 +333,19 @@ class JournalEntriesController extends Controller
             ->with('success', 'Journal entry diupdate');
     }
 
+    public function destroy(string $id)
+    {
+        $res = FinanceApiHelper::delete("/v1/journal-entries/{$id}");
+
+        if (!($res['success'] ?? false)) {
+            return back()->withErrors(['api' => $res['message'] ?? 'Gagal delete draft journal']);
+        }
+
+        return redirect()
+            ->route('finance.journal_entries.index')
+            ->with('success', 'Draft journal berhasil dihapus');
+    }
+
     public function post(string $id, Request $request)
     {
         $idemKey = $request->input('idempotency_key') ?: (string) Str::uuid();
@@ -338,5 +385,63 @@ class JournalEntriesController extends Controller
         return redirect()
             ->route('finance.journal_entries.edit', $newId)
             ->with('success', 'Reversing entry dibuat (draft)');
+    }
+
+    public function amend(string $id, Request $request)
+    {
+        $request->validate([
+            'reverse_date' => 'required|date',
+            'reverse_memo' => 'nullable|string|max:500',
+            'date' => 'required|date',
+            'memo' => 'nullable|string|max:500',
+            'amend_line_account_id' => 'required|array|min:2',
+            'amend_line_debit' => 'required|array',
+            'amend_line_credit' => 'required|array',
+            'amend_line_memo' => 'nullable|array',
+            'amend_line_bp_id' => 'nullable|array',
+            'amend_line_bp_id.*' => 'nullable|string|max:100',
+        ]);
+
+        try {
+            $lines = $this->buildLinesFromRequest($request, 'amend_line_');
+        } catch (\Throwable $e) {
+            return back()->withErrors(['api' => $e->getMessage()])->withInput();
+        }
+
+        [$td, $tc, $balanced] = $this->calcTotals($lines);
+        if (!$balanced) {
+            return back()->withErrors([
+                'api' => "Balance check failed: total debit must equal total credit. (Debit={$td}, Credit={$tc})",
+            ])->withInput();
+        }
+
+        $payload = [
+            'reverse_date' => (string) $request->input('reverse_date'),
+            'reverse_memo' => $request->input('reverse_memo') ?: null,
+            'date' => (string) $request->input('date'),
+            'memo' => $request->input('memo') ?: null,
+            'lines' => $lines,
+        ];
+
+        $res = FinanceApiHelper::post("/v1/journal-entries/{$id}/amend", $payload);
+
+        if (!($res['success'] ?? false)) {
+            return back()->withErrors(['api' => $res['message'] ?? 'Gagal amend'])->withInput();
+        }
+
+        $correctedId = data_get($res, 'data.data.corrected_entry.id')
+            ?? data_get($res, 'data.data.corrected_entry_id')
+            ?? data_get($res, 'data.corrected_entry.id')
+            ?? data_get($res, 'data.corrected_entry_id');
+
+        if (!empty($correctedId)) {
+            return redirect()
+                ->route('finance.journal_entries.edit', $correctedId)
+                ->with('success', 'Amend berhasil: reversing + corrected sudah posted.');
+        }
+
+        return redirect()
+            ->route('finance.journal_entries.edit', $id)
+            ->with('success', 'Amend berhasil: reversing + corrected sudah posted.');
     }
 }

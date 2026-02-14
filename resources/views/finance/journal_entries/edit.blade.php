@@ -1,6 +1,6 @@
 @extends('finance.layout')
 @section('title', 'Edit Journal Entry')
-@section('subtitle', 'View / Edit draft, Post, Reverse')
+@section('subtitle', 'View / Edit draft, Post, Amend')
 
 @section('header_actions')
     <a href="{{ route('finance.journal_entries.index') }}" class="px-4 py-2 rounded border">Back</a>
@@ -103,6 +103,12 @@
             </div>
         </div>
 
+        @if ($isPosted)
+            <div class="p-3 rounded bg-indigo-50 border border-indigo-200 text-indigo-900 text-sm">
+                Posted tidak bisa diedit/hapus langsung. Gunakan Amend untuk koreksi, agar audit trail aman.
+            </div>
+        @endif
+
         {{-- MAIN FORM (UPDATE) --}}
         <form method="POST" action="{{ route('finance.journal_entries.update', $entry['id']) }}" class="space-y-4"
             id="entryForm">
@@ -181,40 +187,63 @@
                 </div>
             </div>
 
-            <div class="flex flex-wrap gap-2">
-                @if ($canWrite && $isDraft)
-                    <button type="submit" id="updateBtn" class="px-4 py-2 rounded bg-black text-white">
-                        Update Draft
-                    </button>
-                @endif
-                <a class="px-4 py-2 rounded border" href="{{ route('finance.journal_entries.index') }}">Back</a>
-            </div>
         </form>
 
-        {{-- ACTIONS: POST / REVERSE --}}
-        @if ($canWrite && $isDraft)
-            <div class="border-t pt-4">
-                <form id="postForm" method="POST" action="{{ route('finance.journal_entries.post', $entry['id']) }}"
-                    onsubmit="return confirm('Post entry ini? Setelah posted tidak bisa diedit.');">
-                    @csrf
-                    <input type="hidden" name="idempotency_key" value="{{ $idemKey }}">
+        <div class="border-t pt-4">
+            <div class="rounded border bg-gray-50 p-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    @if ($canWrite && $isDraft)
+                        <button type="submit" form="entryForm" id="updateBtn"
+                            class="px-4 py-2 rounded bg-black text-white text-sm">
+                            Update Draft
+                        </button>
 
-                    {{-- NOTE: fallback style supaya tombol pasti kelihatan walau tailwind class ke-purge --}}
-                    <button type="submit" id="postBtn"
-                        class="px-4 py-2 rounded text-white border border-green-800 bg-green-700"
-                        style="background:#15803d">
-                        Post Journal Entry
-                    </button>
+                        <form id="postForm" method="POST" action="{{ route('finance.journal_entries.post', $entry['id']) }}"
+                            class="inline-flex"
+                            onsubmit="return confirm('Post entry ini? Setelah posted tidak bisa diedit/hapus langsung.');">
+                            @csrf
+                            <input type="hidden" name="idempotency_key" value="{{ $idemKey }}">
 
-                    <p class="text-xs text-gray-500 mt-1">
-                        Tombol Post akan aktif jika lines valid dan total debit = total credit &gt; 0.
+                            <button type="submit" id="postBtn"
+                                class="px-4 py-2 rounded text-white border border-green-800 bg-green-700 text-sm"
+                                style="background:#15803d">
+                                Post Journal Entry
+                            </button>
+                        </form>
+
+                        <form method="POST" action="{{ route('finance.journal_entries.destroy', $entry['id']) }}"
+                            class="inline-flex" onsubmit="return confirm('Hapus draft jurnal ini?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="px-4 py-2 rounded border border-red-300 text-red-700 text-sm">
+                                Delete Draft
+                            </button>
+                        </form>
+                    @endif
+
+                    @if ($canWrite && $isPosted)
+                        <div id="amendSection" class="inline-flex">
+                            <button type="button" id="openAmendModal"
+                                class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm">
+                                Amend Posted Journal
+                            </button>
+                        </div>
+                    @endif
+
+                    <a class="px-4 py-2 rounded border text-sm ml-auto"
+                        href="{{ route('finance.journal_entries.index') }}">Back</a>
+                </div>
+
+                @if ($canWrite && $isDraft)
+                    <p class="text-xs text-gray-500 mt-2">
+                        Tombol Post aktif jika lines valid dan total debit = total credit &gt; 0.
                     </p>
-                </form>
+                @endif
             </div>
-        @endif
+        </div>
 
         @if ($canWrite && $isPosted && !$isOpeningOrClosing)
-            <div class="border-t pt-4">
+            <div class="border-t pt-4" id="reverseSection">
                 <form method="POST" action="{{ route('finance.journal_entries.reverse', $entry['id']) }}"
                     onsubmit="return confirm('Buat reversing entry dari entry ini?');" class="space-y-2">
                     @csrf
@@ -242,8 +271,105 @@
                     <span class="font-semibold">Info:</span> Opening/Closing tidak bisa direverse.
                 </div>
             </div>
+        @elseif ($status === 'void')
+            <div class="border-t pt-4">
+                <div class="p-3 rounded bg-gray-50 border text-sm text-gray-700">
+                    Entry `void`: edit/delete/post/amend dinonaktifkan.
+                </div>
+            </div>
         @endif
     </div>
+
+    @if ($canWrite && $isPosted)
+        <div id="amendModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true"
+            aria-labelledby="amendDialogTitle" aria-hidden="true">
+            <div class="absolute inset-0 bg-black/40" id="closeAmendModalBg"></div>
+            <div id="amendDialogPanel" class="relative max-w-6xl mx-auto mt-8 bg-white rounded border shadow-lg p-4 max-h-[90vh] overflow-auto"
+                tabindex="-1">
+                <div class="flex items-center justify-between mb-3">
+                    <div id="amendDialogTitle" class="font-semibold text-lg">Amend Posted Journal</div>
+                    <button type="button" id="closeAmendModalBtn" class="px-3 py-1.5 rounded border">Tutup</button>
+                </div>
+
+                <div id="amendErrors" class="hidden p-3 rounded bg-red-100 text-red-800 mb-3">
+                    <ul id="amendErrorsList" class="list-disc ml-5 text-sm"></ul>
+                </div>
+
+                <form method="POST" id="amendForm" action="{{ route('finance.journal_entries.amend', $entry['id']) }}"
+                    class="space-y-4">
+                    @csrf
+
+                    <div class="grid md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm mb-1">Reverse Date</label>
+                            <input type="date" name="reverse_date" value="{{ old('reverse_date', $entryDate) }}"
+                                class="border rounded w-full px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">Reverse Memo (optional)</label>
+                            <input name="reverse_memo" value="{{ old('reverse_memo') }}"
+                                class="border rounded w-full px-3 py-2" placeholder="Optional...">
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">Corrected Date</label>
+                            <input type="date" name="date" value="{{ old('date', $entryDate) }}"
+                                class="border rounded w-full px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">Corrected Memo (optional)</label>
+                            <input name="memo" value="{{ old('memo', $entry['memo'] ?? '') }}"
+                                class="border rounded w-full px-3 py-2" placeholder="Optional...">
+                        </div>
+                    </div>
+
+                    <div class="border rounded">
+                        <div class="flex items-center justify-between p-3 border-b bg-gray-50">
+                            <div class="font-semibold">Corrected Lines</div>
+                            <button type="button" id="amendAddLineBtn"
+                                class="px-3 py-1.5 rounded bg-black text-white text-sm">+ Add line</button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left p-3">Account</th>
+                                        <th class="text-left p-3">BP</th>
+                                        <th class="text-left p-3">Memo</th>
+                                        <th class="text-right p-3">Debit</th>
+                                        <th class="text-right p-3">Credit</th>
+                                        <th class="text-right p-3">#</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="amendLinesBody"></tbody>
+                                <tfoot>
+                                    <tr class="border-t bg-gray-50">
+                                        <td class="p-3 font-semibold" colspan="3">Totals</td>
+                                        <td class="p-3 text-right font-semibold" id="amendTotalDebit">0.00</td>
+                                        <td class="p-3 text-right font-semibold" id="amendTotalCredit">0.00</td>
+                                        <td class="p-3 text-right">
+                                            <span id="amendBalanceBadge"
+                                                class="inline-flex px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
+                                                Not balanced
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="submit" id="amendSubmitBtn"
+                            class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">
+                            <span id="amendSubmitText">Submit Amend</span>
+                        </button>
+                        <button type="button" id="amendCancelBtn" class="px-4 py-2 rounded border">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
 
     <template id="accountOptionsTemplate">
         <option value="">— Select account —</option>
@@ -902,6 +1028,415 @@
                         return;
                     }
                 });
+            }
+
+            const canAmend = @json($canWrite && $isPosted);
+            if (canAmend) {
+                const amendModal = document.getElementById('amendModal');
+                const amendDialogPanel = document.getElementById('amendDialogPanel');
+                const openAmendModalBtn = document.getElementById('openAmendModal');
+                const closeAmendModalBg = document.getElementById('closeAmendModalBg');
+                const closeAmendModalBtn = document.getElementById('closeAmendModalBtn');
+                const amendCancelBtn = document.getElementById('amendCancelBtn');
+                const amendForm = document.getElementById('amendForm');
+                const amendLinesBody = document.getElementById('amendLinesBody');
+                const amendAddLineBtn = document.getElementById('amendAddLineBtn');
+                const amendErrors = document.getElementById('amendErrors');
+                const amendErrorsList = document.getElementById('amendErrorsList');
+                const amendTotalDebit = document.getElementById('amendTotalDebit');
+                const amendTotalCredit = document.getElementById('amendTotalCredit');
+                const amendBalanceBadge = document.getElementById('amendBalanceBadge');
+                const amendSubmitBtn = document.getElementById('amendSubmitBtn');
+                const amendSubmitText = document.getElementById('amendSubmitText');
+                const amendReverseDateInput = amendForm?.querySelector('input[name="reverse_date"]');
+
+                let isAmendSubmitting = false;
+                let lastFocusedBeforeModal = null;
+
+                function setAmendSubmittingState(submitting) {
+                    isAmendSubmitting = !!submitting;
+
+                    if (amendSubmitBtn) {
+                        amendSubmitBtn.disabled = isAmendSubmitting;
+                        amendSubmitBtn.classList.toggle('opacity-60', isAmendSubmitting);
+                        amendSubmitBtn.classList.toggle('cursor-not-allowed', isAmendSubmitting);
+                    }
+
+                    if (amendSubmitText) {
+                        amendSubmitText.textContent = isAmendSubmitting ? 'Submitting...' : 'Submit Amend';
+                    }
+
+                    if (closeAmendModalBtn) closeAmendModalBtn.disabled = isAmendSubmitting;
+                    if (amendCancelBtn) amendCancelBtn.disabled = isAmendSubmitting;
+                    if (amendAddLineBtn) amendAddLineBtn.disabled = isAmendSubmitting;
+                }
+
+                function openAmendModal() {
+                    if (!amendModal) return;
+                    lastFocusedBeforeModal = document.activeElement;
+                    amendModal.classList.remove('hidden');
+                    amendModal.setAttribute('aria-hidden', 'false');
+                    document.body.classList.add('overflow-hidden');
+                    setTimeout(() => {
+                        if (amendReverseDateInput) {
+                            amendReverseDateInput.focus();
+                        } else if (amendDialogPanel) {
+                            amendDialogPanel.focus();
+                        }
+                    }, 0);
+                }
+
+                function closeAmendModal() {
+                    if (isAmendSubmitting) return;
+                    if (!amendModal) return;
+                    amendModal.classList.add('hidden');
+                    amendModal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('overflow-hidden');
+                    if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+                        lastFocusedBeforeModal.focus();
+                    }
+                }
+
+                function renderAmendErrors(errors) {
+                    if (!amendErrors || !amendErrorsList) return;
+                    if (!errors.length) {
+                        amendErrors.classList.add('hidden');
+                        amendErrorsList.innerHTML = '';
+                        return;
+                    }
+                    amendErrors.classList.remove('hidden');
+                    amendErrorsList.innerHTML = errors.map(e => `<li>${escapeHtml(e)}</li>`).join('');
+                }
+
+                function getAmendRows() {
+                    return Array.from(amendLinesBody.querySelectorAll('tr'));
+                }
+
+                function getAmendAccountMeta(tr) {
+                    const sel = tr.querySelector('.amend-account-select');
+                    const opt = sel && sel.selectedOptions ? sel.selectedOptions[0] : null;
+                    return {
+                        subledger: (opt?.dataset?.subledger || '').toLowerCase(),
+                        requiresBp: (opt?.dataset?.requiresBp || '') === '1',
+                    };
+                }
+
+                async function refreshAmendBpUI(tr, q = '') {
+                    const meta = getAmendAccountMeta(tr);
+                    const categories = getBpCategoriesForAccount(meta);
+
+                    const bpBox = tr.querySelector('.amend-bp-box');
+                    const bpSelect = tr.querySelector('.amend-bp-select');
+                    const bpHidden = tr.querySelector('[name="amend_line_bp_id[]"]');
+                    const bpHint = tr.querySelector('.amend-bp-hint');
+                    const bpSearch = tr.querySelector('.amend-bp-search');
+                    const bpNotRequired = tr.querySelector('.amend-bp-not-required');
+
+                    if (!bpBox || !bpSelect || !bpHidden) return;
+
+                    if (!categories) {
+                        bpBox.classList.add('hidden');
+                        if (bpNotRequired) bpNotRequired.classList.remove('hidden');
+                        if (bpSearch) bpSearch.value = '';
+                        bpHidden.value = '';
+                        bpSelect.innerHTML = '<option value="">-- Select BP --</option>';
+                        if (bpHint) bpHint.textContent = '';
+                        return;
+                    }
+
+                    bpBox.classList.remove('hidden');
+                    if (bpNotRequired) bpNotRequired.classList.add('hidden');
+
+                    const items = await getBpOptionsForCategories(categories, q);
+                    const opts = ['<option value="">-- Select BP --</option>'];
+                    (items || []).forEach(it => {
+                        const id = String(it.id ?? '');
+                        if (!id) return;
+                        const code = String(it.code ?? '');
+                        const name = String(it.name ?? '');
+                        const label = `${code} - ${name}`.trim();
+                        opts.push(`<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`);
+                    });
+                    bpSelect.innerHTML = opts.join('');
+                    bpSelect.value = (bpHidden.value || '').trim();
+
+                    if (bpHint) {
+                        const parts = [];
+                        if (meta.subledger) parts.push(`subledger: ${meta.subledger.toUpperCase()}`);
+                        if (categories.length === 1) parts.push(`filter: ${categories[0]}`);
+                        if (categories.length > 1) parts.push(`filter: ${categories.join(' / ')}`);
+                        if (categories.length === 0) parts.push('filter: all');
+                        bpHint.textContent = parts.join(' | ');
+                    }
+                }
+
+                function computeAmendTotals() {
+                    let td = 0;
+                    let tc = 0;
+                    getAmendRows().forEach(tr => {
+                        td += Number(tr.querySelector('[name="amend_line_debit[]"]')?.value || 0);
+                        tc += Number(tr.querySelector('[name="amend_line_credit[]"]')?.value || 0);
+                    });
+                    const balanced = Math.round(td * 100) === Math.round(tc * 100) && td > 0;
+                    return {
+                        td,
+                        tc,
+                        balanced
+                    };
+                }
+
+                function validateAmendRows() {
+                    const errors = [];
+                    const rows = getAmendRows();
+                    if (rows.length < 2) errors.push('Minimal 2 lines.');
+
+                    rows.forEach((tr, idx) => {
+                        const accountId = (tr.querySelector('[name="amend_line_account_id[]"]')?.value || '').trim();
+                        const debit = Number(tr.querySelector('[name="amend_line_debit[]"]')?.value || 0);
+                        const credit = Number(tr.querySelector('[name="amend_line_credit[]"]')?.value || 0);
+                        const meta = getAmendAccountMeta(tr);
+                        const needsBp = getBpCategoriesForAccount(meta) !== null;
+                        const bpId = (tr.querySelector('[name="amend_line_bp_id[]"]')?.value || '').trim();
+
+                        if (!accountId) errors.push(`Line #${idx + 1}: account wajib dipilih.`);
+                        if (debit < 0 || credit < 0) errors.push(`Line #${idx + 1}: debit/credit tidak boleh negatif.`);
+                        if (debit > 0 && credit > 0) errors.push(`Line #${idx + 1}: isi debit atau credit saja (XOR).`);
+                        if (debit === 0 && credit === 0) errors.push(`Line #${idx + 1}: debit atau credit harus > 0.`);
+                        if (accountId && needsBp && !bpId) {
+                            errors.push(`Line #${idx + 1}: akun AR/AP atau requires_bp wajib pilih BP.`);
+                        }
+                    });
+
+                    const {
+                        td,
+                        tc
+                    } = computeAmendTotals();
+                    if (!(td > 0 || tc > 0)) errors.push('Total tidak boleh 0.');
+                    if (Math.abs(td - tc) >= 0.005) errors.push('Balance check failed: total debit must equal total credit.');
+
+                    return errors;
+                }
+
+                function focusFirstAmendErrorField() {
+                    const rows = getAmendRows();
+                    for (let i = 0; i < rows.length; i++) {
+                        const tr = rows[i];
+                        const accountEl = tr.querySelector('[name="amend_line_account_id[]"]');
+                        const debitEl = tr.querySelector('[name="amend_line_debit[]"]');
+                        const creditEl = tr.querySelector('[name="amend_line_credit[]"]');
+                        const bpEl = tr.querySelector('.amend-bp-select');
+
+                        const accountId = (accountEl?.value || '').trim();
+                        const debit = Number(debitEl?.value || 0);
+                        const credit = Number(creditEl?.value || 0);
+                        const meta = getAmendAccountMeta(tr);
+                        const needsBp = getBpCategoriesForAccount(meta) !== null;
+                        const bpId = (tr.querySelector('[name="amend_line_bp_id[]"]')?.value || '').trim();
+
+                        if (!accountId) {
+                            accountEl?.focus?.();
+                            return;
+                        }
+                        if (debit < 0 || credit < 0 || (debit > 0 && credit > 0) || (debit === 0 && credit === 0)) {
+                            debitEl?.focus?.();
+                            return;
+                        }
+                        if (accountId && needsBp && !bpId) {
+                            bpEl?.focus?.();
+                            return;
+                        }
+                    }
+                }
+
+                function recalcAmend() {
+                    const {
+                        td,
+                        tc,
+                        balanced
+                    } = computeAmendTotals();
+                    if (amendTotalDebit) amendTotalDebit.textContent = money(td);
+                    if (amendTotalCredit) amendTotalCredit.textContent = money(tc);
+                    if (amendBalanceBadge) {
+                        amendBalanceBadge.textContent = balanced ? 'Balanced' : 'Not balanced';
+                        amendBalanceBadge.className = 'inline-flex px-2 py-1 rounded text-xs ' + (balanced ?
+                            'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800');
+                    }
+                }
+
+                function bindAmendRow(tr) {
+                    const accountSel = tr.querySelector('.amend-account-select');
+                    const debitInput = tr.querySelector('[name="amend_line_debit[]"]');
+                    const creditInput = tr.querySelector('[name="amend_line_credit[]"]');
+                    const removeBtn = tr.querySelector('[data-amend-remove]');
+                    const bpSelect = tr.querySelector('.amend-bp-select');
+                    const bpHidden = tr.querySelector('[name="amend_line_bp_id[]"]');
+                    const bpSearch = tr.querySelector('.amend-bp-search');
+                    let bpTimer = null;
+
+                    if (debitInput) {
+                        debitInput.addEventListener('input', () => {
+                            if (Number(debitInput.value || 0) > 0 && creditInput) creditInput.value = 0;
+                            recalcAmend();
+                        });
+                    }
+                    if (creditInput) {
+                        creditInput.addEventListener('input', () => {
+                            if (Number(creditInput.value || 0) > 0 && debitInput) debitInput.value = 0;
+                            recalcAmend();
+                        });
+                    }
+
+                    tr.querySelectorAll('select,input').forEach(el => {
+                        el.addEventListener('change', recalcAmend);
+                    });
+
+                    if (accountSel) {
+                        accountSel.addEventListener('change', () => {
+                            if (bpHidden) bpHidden.value = '';
+                            if (bpSelect) bpSelect.value = '';
+                            refreshAmendBpUI(tr, '').then(recalcAmend);
+                        });
+                    }
+
+                    if (bpSelect && bpHidden) {
+                        bpSelect.addEventListener('change', () => {
+                            bpHidden.value = bpSelect.value || '';
+                            recalcAmend();
+                        });
+                    }
+
+                    if (bpSearch) {
+                        bpSearch.addEventListener('input', () => {
+                            clearTimeout(bpTimer);
+                            bpTimer = setTimeout(() => {
+                                refreshAmendBpUI(tr, (bpSearch.value || '').trim());
+                            }, 300);
+                        });
+                    }
+
+                    if (removeBtn) {
+                        removeBtn.addEventListener('click', () => {
+                            tr.remove();
+                            recalcAmend();
+                        });
+                    }
+                }
+
+                function addAmendLine(prefill = {}) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-t';
+                    tr.innerHTML = `
+                        <td class="p-3">
+                            <select name="amend_line_account_id[]" class="border rounded p-2 w-full amend-account-select" required>
+                                ${optTpl}
+                            </select>
+                        </td>
+                        <td class="p-3">
+                            <div class="amend-bp-box hidden">
+                                <select class="border rounded p-2 w-full amend-bp-select">
+                                    <option value="">-- Select BP --</option>
+                                </select>
+                                <input type="hidden" name="amend_line_bp_id[]" value="${escapeHtml(prefill.bp_id || '')}">
+                                <input type="text" class="amend-bp-search border rounded px-3 py-2 w-full mt-2 text-sm" placeholder="Cari BP...">
+                                <div class="amend-bp-hint text-xs text-gray-500 mt-1"></div>
+                            </div>
+                            <div class="amend-bp-not-required text-gray-400">(Tidak perlu BP)</div>
+                        </td>
+                        <td class="p-3">
+                            <input name="amend_line_memo[]" class="border rounded px-3 py-2 w-full" value="${escapeHtml(prefill.memo || '')}">
+                        </td>
+                        <td class="p-3 text-right">
+                            <input type="number" step="0.01" min="0" name="amend_line_debit[]" class="border rounded px-3 py-2 w-32 text-right" value="${Number(prefill.debit ?? 0)}">
+                        </td>
+                        <td class="p-3 text-right">
+                            <input type="number" step="0.01" min="0" name="amend_line_credit[]" class="border rounded px-3 py-2 w-32 text-right" value="${Number(prefill.credit ?? 0)}">
+                        </td>
+                        <td class="p-3 text-right">
+                            <button type="button" data-amend-remove class="underline text-red-600">Remove</button>
+                        </td>
+                    `;
+
+                    amendLinesBody.appendChild(tr);
+                    if (prefill.account_id) {
+                        tr.querySelector('[name="amend_line_account_id[]"]').value = prefill.account_id;
+                    }
+
+                    bindAmendRow(tr);
+                    refreshAmendBpUI(tr, '');
+                    recalcAmend();
+                }
+
+                if (openAmendModalBtn) openAmendModalBtn.addEventListener('click', openAmendModal);
+                if (closeAmendModalBg) closeAmendModalBg.addEventListener('click', closeAmendModal);
+                if (closeAmendModalBtn) closeAmendModalBtn.addEventListener('click', closeAmendModal);
+                if (amendCancelBtn) amendCancelBtn.addEventListener('click', closeAmendModal);
+                if (amendAddLineBtn) amendAddLineBtn.addEventListener('click', () => addAmendLine({}));
+
+                document.addEventListener('keydown', function(e) {
+                    if (!amendModal || amendModal.classList.contains('hidden')) return;
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        closeAmendModal();
+                    }
+                });
+
+                const oldAmendIds = @json(old('amend_line_account_id', []));
+                const oldAmendDeb = @json(old('amend_line_debit', []));
+                const oldAmendCre = @json(old('amend_line_credit', []));
+                const oldAmendMem = @json(old('amend_line_memo', []));
+                const oldAmendBp = @json(old('amend_line_bp_id', []));
+
+                if (oldAmendIds && oldAmendIds.length) {
+                    for (let i = 0; i < oldAmendIds.length; i++) {
+                        addAmendLine({
+                            account_id: oldAmendIds[i] || '',
+                            bp_id: oldAmendBp[i] || '',
+                            debit: Number(oldAmendDeb[i] || 0),
+                            credit: Number(oldAmendCre[i] || 0),
+                            memo: oldAmendMem[i] || '',
+                        });
+                    }
+                    openAmendModal();
+                } else {
+                    const entryLines = @json($entry['lines'] ?? []);
+                    (entryLines || []).forEach(l => addAmendLine({
+                        account_id: l.account_id || '',
+                        bp_id: l.bp_id || l.bpId || '',
+                        debit: Number(l.debit || 0),
+                        credit: Number(l.credit || 0),
+                        memo: l.memo || '',
+                    }));
+                    if (!entryLines || entryLines.length === 0) {
+                        addAmendLine({});
+                        addAmendLine({});
+                    }
+                }
+
+                if (window.location.hash === '#amendSection') {
+                    openAmendModal();
+                }
+
+                if (amendForm) {
+                    amendForm.addEventListener('submit', function(e) {
+                        if (isAmendSubmitting) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                        }
+
+                        const errors = validateAmendRows();
+                        renderAmendErrors(errors);
+                        if (errors.length) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            focusFirstAmendErrorField();
+                            return;
+                        }
+
+                        setAmendSubmittingState(true);
+                    });
+                }
             }
 
             // init calc + button states
